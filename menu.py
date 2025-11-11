@@ -12,7 +12,7 @@ pygame.mixer.init()
 MENU_WIDTH, MENU_HEIGHT = 1200, 540
 WIDTH, HEIGHT = 960, 540  # Mantenemos la resolución original para las pantallas de presentación
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Cazador De Sueños")
+pygame.display.set_caption("BIT HUNTER")
 
 # Superficie para el menú con la dimensión solicitada
 menu_surface = pygame.Surface((MENU_WIDTH, MENU_HEIGHT))
@@ -37,15 +37,19 @@ subtitle_font = pygame.font.SysFont("Arial", 36)
 menu_font = pygame.font.SysFont("Arial", 38, bold=True)
 level_font = pygame.font.SysFont("Arial", 28, bold=True)
 info_font = pygame.font.SysFont("Arial", 20)
+credits_name_font = pygame.font.SysFont("Arial", 32, bold=True)  # Nueva fuente para nombres
+credits_role_font = pygame.font.SysFont("Arial", 24)  # Nueva fuente para roles
 
 # Estados del programa
 STATE_LOADING = 0
-STATE_CREATOR = 1
-STATE_LOGO = 2
-STATE_DIRECTOR = 3
-STATE_UNIVERSITY = 4
-STATE_MAIN_MENU = 5
-STATE_LEVEL_SELECT = 6
+STATE_CREATOR_1 = 1
+STATE_CREATOR_2 = 2
+STATE_LOGO = 3
+STATE_DIRECTOR = 4
+STATE_UNIVERSITY = 5
+STATE_MAIN_MENU = 6
+STATE_LEVEL_SELECT = 7
+STATE_CREDITS = 8  # Nuevo estado para créditos
 
 # Variables de estado
 current_state = STATE_LOADING
@@ -60,13 +64,123 @@ music_started = False
 flash_alpha = 0
 flash_duration = 0
 
-# Tiempos de transición (en milisegundos)
-LOADING_TIME = 5000  # 5 segundos para la pantalla de carga
+# Tiempos de transición (en milisegundos) - AJUSTABLES SEGÚN TU CANCIÓN
+LOADING_TIME = 3000           # 5 segundos para la pantalla de carga
+FADE_TIME_CREATOR_1 = 2000    # 3 segundos para vista 1 - AJUSTA ESTE VALOR
+FADE_TIME_CREATOR_2 = 2000    # 3 segundos para vista 2 - AJUSTA ESTE VALOR
+FADE_TIME_LOGO = 1000         # 3 segundos para logo - AJUSTA ESTE VALOR
+FADE_TIME_DIRECTOR = 1000     # 3 segundos para director - AJUSTA ESTE VALOR
+FADE_TIME_UNIVERSITY = 1000   # 3 segundos para universidad - AJUSTA ESTE VALOR
+CREDITS_TIME = 5000           # 5 segundos para cada vista de créditos (aumentado)
 
-# Tiempos modificados según tu solicitud
-FADE_TIME_CREATOR = 3000     # 3 segundos para el creador (incluyendo fade)
-FADE_TIME_LOGO = 2000        # 2 segundos para el logo (incluyendo fade)  
-FADE_TIME_OTHERS = 1000      # 1 segundo para los demás (incluyendo fade)
+# Datos para las vistas
+vistas = [
+    # Vista 1 - Creado por Jose Miguel, Angel, Maria Fernanda
+    {
+        "titulo": "Creado por",
+        "integrantes": [
+            "Jose Miguel Rodriguez Tinoco",
+            "Ángel Valentín Flores Eduardo", 
+            "María Fernanda Andrade Herrera"
+        ],
+        "tiempo": FADE_TIME_CREATOR_1
+    },
+    # Vista 2 - Creado por Antonio, Ines, Hector  
+    {
+        "titulo": "Creado por",
+        "integrantes": [
+            "Antonio Arellano Morales",
+            "Inés Osorio Garcia",
+            "Héctor Agustín Castillo Pérez"
+        ],
+        "tiempo": FADE_TIME_CREATOR_2
+    },
+    # Vista 3 - Logo de la empresa
+    {
+        "tipo": "imagen",
+        "titulo": "Empresa Innova",
+        "imagen": "img/intellisoft.jpg",
+        "tiempo": FADE_TIME_LOGO
+    },
+    # Vista 4 - Director
+    {
+        "tipo": "imagen", 
+        "titulo": "Python Production",
+        "imagen": "img/python.png",
+        "tiempo": FADE_TIME_DIRECTOR
+    },
+    # Vista 5 - Universidad
+    {
+        "tipo": "imagen",
+        "titulo": ["Por La Universidad "],  # Lista con dos líneas
+        "imagen": "img/utt.png", 
+        "tiempo": FADE_TIME_UNIVERSITY
+    }
+]
+
+# Datos para las vistas de créditos - MEJORADO CON DISEÑO ALTERNANTE Y NOMBRES AJUSTADOS
+creditos_vistas = [
+    # Vistas individuales de creadores con diseño alternante
+    {
+        "nombre": "Jose Miguel\nRodriguez Tinoco",
+        "rol": "Programador Principal",
+        "lado": "izquierda",  # Texto a la izquierda, imagen a la derecha
+        "imagen": "img/e3.png"
+    },
+    {
+        "nombre": "Ángel Valentín\nFlores Eduardo",
+        "rol": "Diseñador de Niveles", 
+        "lado": "derecha",  # Imagen a la izquierda, texto a la derecha
+        "imagen": "img/clonM.png"
+    },
+    {
+        "nombre": "María Fernanda\nAndrade Herrera",
+        "rol": "Artista Gráfica",
+        "lado": "izquierda",
+        "imagen": "img/fantasma.png"
+    },
+    {
+        "nombre": "Inés Osorio\nGarcia",
+        "rol": "Diseñadora de UI",
+        "lado": "derecha",
+        "imagen": "img/robot.png"
+    },
+    {
+        "nombre": "Antonio Arellano\nMorales",
+        "rol": "Programador de Gameplay",
+        "lado": "izquierda",
+        "imagen": "img/nave.png"
+    },
+    {
+        "nombre": "Héctor Agustín\nCastillo Pérez",
+        "rol": "Compositor Musical",
+        "lado": "derecha",
+        "imagen": "img/numero1.png"
+    },
+    # Vistas de autores de canciones (estilo imagen 2)
+    {
+        "tipo": "autores",
+        "titulo": "Autores de Canciones",
+        "nombres": ["Autor 1", "Autor 2", "Autor 3"],
+        "lado": "centro"
+    },
+    {
+        "tipo": "autores", 
+        "titulo": "Autores de Canciones",
+        "nombres": ["Autor 4", "Autor 5", "Autor 6"],
+        "lado": "centro"
+    },
+    {
+        "tipo": "autores",
+        "titulo": "Autores de Canciones", 
+        "nombres": ["Autor 7", "Autor 8"],
+        "lado": "centro"
+    }
+]
+
+# Variables para créditos
+current_credit_view = 0
+credit_timer = 0
 
 # Cargar imágenes (reemplaza con tus propias imágenes)
 def load_image(name, scale=1.0, fit_screen=False, fit_menu=False):
@@ -98,14 +212,22 @@ def load_image(name, scale=1.0, fit_screen=False, fit_menu=False):
     except:
         # Si no se puede cargar la imagen, crear una placeholder
         print(f"Error al cargar: {name}. Usando placeholder.")
-        surf = pygame.Surface((300, 200))
-        surf.fill((50, 50, 50))
-        text = info_font.render(name, True, WHITE)
-        surf.blit(text, (10, 10))
+        surf = pygame.Surface((300, 300))
+        surf.fill((30, 30, 60))
+        pygame.draw.rect(surf, GOLD, (0, 0, 300, 300), 3)
+        
+        # Dibujar icono de usuario
+        pygame.draw.circle(surf, LIGHT_BLUE, (150, 120), 60)
+        pygame.draw.circle(surf, LIGHT_BLUE, (150, 120), 50)
+        
+        # Dibujar torso
+        pygame.draw.rect(surf, LIGHT_BLUE, (100, 170, 100, 80))
+        
+        text = info_font.render("Imagen", True, WHITE)
+        surf.blit(text, (150 - text.get_width()//2, 270))
         return surf
 
-# Cargar imágenes de presentación (centradas, sin cubrir toda la pantalla)
-creator_image = load_image("img/jose.png", 0.6)  # Ajusta el scale según necesites
+# Cargar imágenes de presentación
 logo_image = load_image("img/empresa.png", 0.5)
 director_image = load_image("img/python.png", 0.6)
 university_image = load_image("img/utt.png", 0.5)
@@ -304,6 +426,213 @@ def draw_button(surface, text, x, y, width, height, color, is_selected=False, is
     
     return pygame.Rect(x, y, width, height)
 
+# Función para dibujar pantalla de creadores con estilo clásico
+def draw_creator_screen(surface, alpha, vista_index):
+    vista = vistas[vista_index]
+    
+    # Fondo negro clásico
+    surface.fill(BLACK)
+    
+    # Efecto de estrellas en el fondo (muy sutil)
+    for i in range(20):
+        x = (pygame.time.get_ticks() * 0.1 + i * 100) % WIDTH
+        y = (i * 30 + pygame.time.get_ticks() * 0.05) % HEIGHT
+        size = 1 + (i % 2)
+        brightness = 100 + (i % 155)
+        pygame.draw.circle(surface, (brightness, brightness, brightness), 
+                         (int(x), int(y)), size)
+    
+    # Dibujar título (común para todas las vistas)
+    if isinstance(vista["titulo"], list):
+        # Título multilínea (para la universidad)
+        for i, linea in enumerate(vista["titulo"]):
+            titulo_text = title_font.render(linea, True, GOLD)
+            titulo_text.set_alpha(alpha)
+            
+            # Efecto de brillo dorado en el título
+            titulo_glow = title_font.render(linea, True, (255, 200, 0))
+            titulo_glow.set_alpha(alpha // 2)
+            
+            # Dibujar línea centrada
+            y_pos = 30 + i * 70  # Espacio entre líneas
+            surface.blit(titulo_glow, (WIDTH//2 - titulo_glow.get_width()//2 + 2, y_pos + 2))
+            surface.blit(titulo_text, (WIDTH//2 - titulo_text.get_width()//2, y_pos))
+        
+        # Línea decorativa simple (más abajo para acomodar las dos líneas)
+        line_y = 160
+    else:
+        # Título de una sola línea (para las demás vistas)
+        titulo_text = title_font.render(vista["titulo"], True, GOLD)
+        titulo_text.set_alpha(alpha)
+        
+        # Efecto de brillo dorado en el título
+        titulo_glow = title_font.render(vista["titulo"], True, (255, 200, 0))
+        titulo_glow.set_alpha(alpha // 2)
+        
+        # Dibujar título centrado
+        surface.blit(titulo_glow, (WIDTH//2 - titulo_glow.get_width()//2 + 2, 52))
+        surface.blit(titulo_text, (WIDTH//2 - titulo_text.get_width()//2, 50))
+        
+        # Línea decorativa simple
+        line_y = 130
+
+    pygame.draw.line(surface, GOLD, (WIDTH//2 - 100, line_y), (WIDTH//2 + 100, line_y), 2)
+    
+    if "tipo" in vista and vista["tipo"] == "imagen":
+        # Dibujar vista con imagen (empresa, director, universidad)
+        try:
+            imagen = load_image(vista["imagen"], 0.6)
+            img_rect = imagen.get_rect(center=(WIDTH//2, HEIGHT//2 + 20))
+            imagen.set_alpha(alpha)
+            surface.blit(imagen, img_rect)
+        except:
+            # Si no se puede cargar la imagen, mostrar placeholder
+            placeholder = pygame.Surface((300, 200))
+            placeholder.fill((50, 50, 50))
+            placeholder_text = info_font.render(vista["imagen"], True, WHITE)
+            placeholder.blit(placeholder_text, (10, 10))
+            placeholder.set_alpha(alpha)
+            surface.blit(placeholder, (WIDTH//2 - 150, HEIGHT//2 - 50))
+        
+    else:
+        # Dibujar vista con nombres de creadores
+        # Dibujar nombres de integrantes
+        for i, nombre in enumerate(vista["integrantes"]):
+            y_pos = 180 + i * 80
+            
+            # Efecto de resplandor para cada nombre
+            nombre_glow = subtitle_font.render(nombre, True, (50, 50, 100))
+            nombre_glow.set_alpha(alpha // 3)
+            surface.blit(nombre_glow, (WIDTH//2 - nombre_glow.get_width()//2 + 3, y_pos + 3))
+            
+            # Nombre principal
+            nombre_text = subtitle_font.render(nombre, True, LIGHT_BLUE)
+            nombre_text.set_alpha(alpha)
+            surface.blit(nombre_text, (WIDTH//2 - nombre_text.get_width()//2, y_pos))
+            
+            # Efecto de partículas alrededor de los nombres
+            if alpha > 200:  # Solo cuando está casi completamente visible
+                for j in range(3):
+                    part_x = WIDTH//2 - nombre_text.get_width()//2 - 20 + j * (nombre_text.get_width() + 40) / 2
+                    part_y = y_pos + 25
+                    part_size = 1 + (pygame.time.get_ticks() % 3)
+                    part_alpha = min(alpha, 150 + (pygame.time.get_ticks() % 105))
+                    pygame.draw.circle(surface, (100, 180, 255, part_alpha), 
+                                     (int(part_x), int(part_y)), part_size)
+
+# Función para dibujar texto multilínea centrado
+def draw_multiline_text(surface, text, font, color, x, y, alpha=255):
+    """Dibuja texto multilínea centrado en la posición x"""
+    lines = text.split('\n')
+    total_height = len(lines) * font.get_height()
+    
+    for i, line in enumerate(lines):
+        line_surface = font.render(line, True, color)
+        line_surface.set_alpha(alpha)
+        line_x = x - line_surface.get_width() // 2
+        line_y = y - total_height // 2 + i * font.get_height()
+        surface.blit(line_surface, (line_x, line_y))
+
+# Función para dibujar pantalla de créditos - MEJORADA CON CENTRADO PERFECTO
+def draw_credits_screen(surface, alpha):
+    vista = creditos_vistas[current_credit_view]
+    
+    # Fondo negro clásico
+    surface.fill(BLACK)
+    
+    # Efecto de estrellas en el fondo (muy sutil)
+    for i in range(30):
+        x = (pygame.time.get_ticks() * 0.1 + i * 70) % WIDTH
+        y = (i * 25 + pygame.time.get_ticks() * 0.03) % HEIGHT
+        size = 1 + (i % 3)
+        brightness = 80 + (i % 175)
+        pygame.draw.circle(surface, (brightness, brightness, brightness), 
+                         (int(x), int(y)), size)
+    
+    if "tipo" in vista and vista["tipo"] == "autores":
+        # Vista de autores de canciones (estilo imagen 2)
+        titulo_text = title_font.render(vista["titulo"], True, GOLD)
+        titulo_text.set_alpha(alpha)
+        
+        # Efecto de brillo dorado en el título
+        titulo_glow = title_font.render(vista["titulo"], True, (255, 200, 0))
+        titulo_glow.set_alpha(alpha // 2)
+        
+        # Dibujar título centrado
+        surface.blit(titulo_glow, (WIDTH//2 - titulo_glow.get_width()//2 + 2, 52))
+        surface.blit(titulo_text, (WIDTH//2 - titulo_text.get_width()//2, 50))
+        
+        # Línea decorativa simple
+        line_y = 130
+        pygame.draw.line(surface, GOLD, (WIDTH//2 - 150, line_y), (WIDTH//2 + 150, line_y), 2)
+        
+        # Dibujar nombres de autores
+        for i, nombre in enumerate(vista["nombres"]):
+            y_pos = 180 + i * 80
+            
+            # Efecto de resplandor para cada nombre
+            nombre_glow = subtitle_font.render(nombre, True, (50, 50, 100))
+            nombre_glow.set_alpha(alpha // 3)
+            surface.blit(nombre_glow, (WIDTH//2 - nombre_glow.get_width()//2 + 3, y_pos + 3))
+            
+            # Nombre principal
+            nombre_text = subtitle_font.render(nombre, True, LIGHT_BLUE)
+            nombre_text.set_alpha(alpha)
+            surface.blit(nombre_text, (WIDTH//2 - nombre_text.get_width()//2, y_pos))
+    else:
+        # Vista individual de creador con diseño alternante y centrado perfecto
+        lado = vista["lado"]
+        
+        # Cargar imagen del creador (tamaño fijo para consistencia)
+        imagen_creador = load_image(vista["imagen"], 0.7)  # Tamaño reducido para mejor ajuste
+        imagen_creador.set_alpha(alpha)
+        
+        # Configurar posiciones según el lado
+        if lado == "izquierda":
+            # Texto a la izquierda, imagen a la derecha
+            imagen_x = WIDTH - 350  # Imagen a la derecha
+            texto_x = 150  # Texto a la izquierda (centrado verticalmente)
+        else:  # derecha
+            # Imagen a la izquierda, texto a la derecha
+            imagen_x = 50  # Imagen a la izquierda
+            texto_x = WIDTH - 300  # Texto a la derecha (centrado verticalmente)
+        
+        # Posición vertical centrada para ambos elementos
+        centro_y = HEIGHT // 2
+        imagen_y = centro_y - imagen_creador.get_height() // 2
+        texto_y = centro_y
+        
+        # Dibujar imagen del creador
+        surface.blit(imagen_creador, (imagen_x, imagen_y))
+        
+        # Dibujar nombre del creador (multilínea si es necesario)
+        draw_multiline_text(surface, vista["nombre"], credits_name_font, GOLD, texto_x, texto_y - 30, alpha)
+        
+        # Dibujar rol del creador
+        rol_text = credits_role_font.render(vista["rol"], True, LIGHT_BLUE)
+        rol_text.set_alpha(alpha)
+        surface.blit(rol_text, (texto_x - rol_text.get_width() // 2, texto_y + 40))
+        
+        # Línea decorativa
+        line_width = 200
+        pygame.draw.line(surface, GOLD, 
+                        (texto_x - line_width // 2, texto_y + 80),
+                        (texto_x + line_width // 2, texto_y + 80), 2)
+    
+    # Información de navegación
+    if alpha > 200:  # Solo mostrar cuando esté completamente visible
+        # Progreso de créditos
+        progreso_text = info_font.render(f"Vista {current_credit_view + 1} de {len(creditos_vistas)}", True, CYAN)
+        surface.blit(progreso_text, (WIDTH//2 - progreso_text.get_width()//2, HEIGHT - 80))
+        
+        # Instrucciones
+        esc_text = info_font.render("Presiona ESC para volver al menú", True, SILVER)
+        surface.blit(esc_text, (WIDTH//2 - esc_text.get_width()//2, HEIGHT - 50))
+        
+        # Instrucciones de navegación
+        nav_text = info_font.render("Flechas ← → para navegar", True, SILVER)
+        surface.blit(nav_text, (WIDTH//2 - nav_text.get_width()//2, HEIGHT - 30))
+
 # Bucle principal
 clock = pygame.time.Clock()
 running = True
@@ -330,7 +659,12 @@ while running:
                         print("Abriendo selección de niveles...")
                     elif selected_option == 1:
                         print("Abriendo opciones...")
-                    elif selected_option == 2:
+                    elif selected_option == 2:  # Créditos
+                        trigger_flash(600, 180)
+                        current_state = STATE_CREDITS
+                        current_credit_view = 0
+                        credit_timer = 0
+                        fade_alpha = 0
                         print("Mostrando créditos...")
                     elif selected_option == 3:
                         running = False
@@ -369,6 +703,25 @@ while running:
                     trigger_flash(400, 150)
                     current_state = STATE_MAIN_MENU
                     print("Volviendo al menú principal...")
+        
+        elif current_state == STATE_CREDITS:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    trigger_flash(400, 150)
+                    current_state = STATE_MAIN_MENU
+                    print("Volviendo al menú principal desde créditos...")
+                elif event.key == pygame.K_RIGHT:
+                    # Avanzar manualmente a la siguiente vista
+                    current_credit_view = (current_credit_view + 1) % len(creditos_vistas)
+                    credit_timer = 0
+                    fade_alpha = 0
+                    print(f"Avanzando a crédito {current_credit_view + 1}")
+                elif event.key == pygame.K_LEFT:
+                    # Retroceder manualmente a la vista anterior
+                    current_credit_view = (current_credit_view - 1) % len(creditos_vistas)
+                    credit_timer = 0
+                    fade_alpha = 0
+                    print(f"Retrocediendo a crédito {current_credit_view + 1}")
     
     # Lógica de estados
     if current_state == STATE_LOADING:
@@ -381,21 +734,25 @@ while running:
             pygame.mixer.music.play(-1)  # -1 para que se repita indefinidamente
             music_started = True
             print("¡Música iniciada! Comenzando presentación...")
-            current_state = STATE_CREATOR
+            current_state = STATE_CREATOR_1
             transition_timer = 0
             fade_alpha = 0
             fade_direction = 1
     
-    elif current_state in [STATE_CREATOR, STATE_LOGO, STATE_DIRECTOR, STATE_UNIVERSITY]:
+    elif current_state in [STATE_CREATOR_1, STATE_CREATOR_2, STATE_LOGO, STATE_DIRECTOR, STATE_UNIVERSITY]:
         transition_timer += dt
         
         # Determinar el tiempo total según el estado actual
-        if current_state == STATE_CREATOR:
-            total_time = FADE_TIME_CREATOR
+        if current_state == STATE_CREATOR_1:
+            total_time = FADE_TIME_CREATOR_1
+        elif current_state == STATE_CREATOR_2:
+            total_time = FADE_TIME_CREATOR_2
         elif current_state == STATE_LOGO:
             total_time = FADE_TIME_LOGO
-        else:
-            total_time = FADE_TIME_OTHERS
+        elif current_state == STATE_DIRECTOR:
+            total_time = FADE_TIME_DIRECTOR
+        elif current_state == STATE_UNIVERSITY:
+            total_time = FADE_TIME_UNIVERSITY
         
         # Controlar efecto de fade (aparecer y desaparecer en el tiempo total)
         half_time = total_time / 2
@@ -409,7 +766,10 @@ while running:
         
         # Cambiar al siguiente estado cuando se complete el tiempo
         if transition_timer >= total_time:
-            if current_state == STATE_CREATOR:
+            if current_state == STATE_CREATOR_1:
+                current_state = STATE_CREATOR_2
+                print("Mostrando equipo 2...")
+            elif current_state == STATE_CREATOR_2:
                 current_state = STATE_LOGO
                 print("Mostrando logo de la empresa...")
             elif current_state == STATE_LOGO:
@@ -427,6 +787,26 @@ while running:
             # Reiniciar temporizadores para el nuevo estado
             transition_timer = 0
             fade_alpha = 0
+    
+    elif current_state == STATE_CREDITS:
+        credit_timer += dt
+        
+        # Controlar efecto de fade (aparecer y desaparecer cada 5 segundos)
+        half_time = CREDITS_TIME / 2
+        
+        if credit_timer < half_time:
+            # Fade-in durante la primera mitad del tiempo
+            fade_alpha = min(255, (credit_timer / half_time) * 255)
+        else:
+            # Fade-out durante la segunda mitad del tiempo
+            fade_alpha = max(0, 255 - ((credit_timer - half_time) / half_time) * 255)
+        
+        # Cambiar a la siguiente vista cuando se complete el tiempo
+        if credit_timer >= CREDITS_TIME:
+            current_credit_view = (current_credit_view + 1) % len(creditos_vistas)
+            credit_timer = 0
+            fade_alpha = 0
+            print(f"Mostrando crédito {current_credit_view + 1}/{len(creditos_vistas)}")
     
     elif current_state in [STATE_MAIN_MENU, STATE_LEVEL_SELECT]:
         # Efecto de cámara avanzando (movimiento más dinámico)
@@ -504,65 +884,23 @@ while running:
             music_text = info_font.render("♪ Música reproduciéndose ♪", True, GREEN)
             screen.blit(music_text, (WIDTH//2 - music_text.get_width()//2, bar_y + bar_height + 40))
     
-    elif current_state == STATE_CREATOR:
-        # Fondo negro para las pantallas de presentación
-        screen.fill(BLACK)
-        
-        # Dibujar imagen del creador con efecto fade (centrada)
-        if creator_image:
-            img_rect = creator_image.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
-            creator_image.set_alpha(int(fade_alpha))
-            screen.blit(creator_image, img_rect)
-        
-        # Texto del creador
-        creator_text = subtitle_font.render("Creado Por Jose Miguel", True, WHITE)
-        creator_text.set_alpha(int(fade_alpha))
-        screen.blit(creator_text, (WIDTH//2 - creator_text.get_width()//2, HEIGHT//2 + 100))
+    elif current_state == STATE_CREATOR_1:
+        draw_creator_screen(screen, int(fade_alpha), 0)
+    
+    elif current_state == STATE_CREATOR_2:
+        draw_creator_screen(screen, int(fade_alpha), 1)
     
     elif current_state == STATE_LOGO:
-        # Fondo negro para las pantallas de presentación
-        screen.fill(BLACK)
-        
-        # Dibujar logo de la empresa con efecto fade (centrada)
-        if logo_image:
-            img_rect = logo_image.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
-            logo_image.set_alpha(int(fade_alpha))
-            screen.blit(logo_image, img_rect)
-        
-        # Texto de la empresa
-        logo_text = subtitle_font.render("Empresa innova", True, BLUE)
-        logo_text.set_alpha(int(fade_alpha))
-        screen.blit(logo_text, (WIDTH//2 - logo_text.get_width()//2, HEIGHT//2 + 100))
+        draw_creator_screen(screen, int(fade_alpha), 2)
     
     elif current_state == STATE_DIRECTOR:
-        # Fondo negro para las pantallas de presentación
-        screen.fill(BLACK)
-        
-        # Dibujar imagen del director con efecto fade (centrada)
-        if director_image:
-            img_rect = director_image.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
-            director_image.set_alpha(int(fade_alpha))
-            screen.blit(director_image, img_rect)
-        
-        # Texto del director
-        director_text = subtitle_font.render("Python Production", True, WHITE)
-        director_text.set_alpha(int(fade_alpha))
-        screen.blit(director_text, (WIDTH//2 - director_text.get_width()//2, HEIGHT//2 + 100))
+        draw_creator_screen(screen, int(fade_alpha), 3)
     
     elif current_state == STATE_UNIVERSITY:
-        # Fondo negro para las pantallas de presentación
-        screen.fill(BLACK)
-        
-        # Dibujar logo de la universidad con efecto fade (centrada)
-        if university_image:
-            img_rect = university_image.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
-            university_image.set_alpha(int(fade_alpha))
-            screen.blit(university_image, img_rect)
-        
-        # Texto de la universidad
-        uni_text = subtitle_font.render("Universidad Tecnologica de Tecamachalco", True, GREEN)
-        uni_text.set_alpha(int(fade_alpha))
-        screen.blit(uni_text, (WIDTH//2 - uni_text.get_width()//2, HEIGHT//2 + 100))
+        draw_creator_screen(screen, int(fade_alpha), 4)
+    
+    elif current_state == STATE_CREDITS:
+        draw_credits_screen(screen, int(fade_alpha))
     
     elif current_state == STATE_MAIN_MENU:
         # Limpiar la superficie del menú
@@ -588,7 +926,7 @@ while running:
                              particle['size'])
         
         # Título con diseño mejorado
-        title_text = "MENÚ PRINCIPAL"
+        title_text = "BIT HUNTER"
         
         # Sombra del título
         title_shadow = title_font.render(title_text, True, (30, 30, 60))

@@ -37,6 +37,16 @@ dialogue_font = pygame.font.SysFont("Arial", 28)
 fondo_img = pygame.image.load("img/bosque.png").convert()
 fondo_img = pygame.transform.scale(fondo_img, (WIDTH, HEIGHT))
 
+# Nuevo fondo para fase 2
+try:
+    fondo_fase2_img = pygame.image.load("img/infierno.png").convert()
+    fondo_fase2_img = pygame.transform.scale(fondo_fase2_img, (WIDTH, HEIGHT))
+    has_fondo_fase2 = True
+except:
+    print("No se pudo cargar fondo_fase2.png, usando fondo original")
+    fondo_fase2_img = fondo_img
+    has_fondo_fase2 = False
+
 nave_img_original = pygame.image.load("img/nave.png").convert_alpha()
 boss_img = pygame.image.load("img/e3.png").convert_alpha()
 boss_img = pygame.transform.scale(boss_img, (200, 200))
@@ -1249,7 +1259,7 @@ class Player:
             self.lives = self.max_lives
 
 class Bullet:
-    def __init__(self, x, y, vx, vy, color=YELLOW, owner="player", size=6, homing=False, speed_factor=1.0):
+    def __init__(self, x, y, vx, vy, color=GREEN, owner="player", size=6, homing=False, speed_factor=1.0):  # Cambiado a GREEN por defecto
         self.x = x
         self.y = y
         self.vx = vx * speed_factor
@@ -1404,7 +1414,7 @@ class Boss:
         self.h = 200
         self.x = WIDTH + 200
         self.y = (HEIGHT - self.h) // 2
-        self.max_hp = 5000
+        self.max_hp = 8000
         self.hp = self.max_hp
         self.phase = 1
         self.rect = Rect(self.x, self.y, self.w, self.h)
@@ -1420,6 +1430,10 @@ class Boss:
         self.aura_effect = BossAura(self)
         self.phase_transition = False
         self.phase_transition_timer = 0
+        self.phase2_flash_timer = 0
+        self.phase2_flash_duration = 1.0
+        self.phase2_flash_active = False
+        self.old_phase = 1  # Para detectar cambios de fase
 
     def update(self, dt, enemy_bullets, player, obstacles, fight_started):
         if self.entering:
@@ -1435,7 +1449,7 @@ class Boss:
             return
 
         # Detectar cambio de fase
-        old_phase = self.phase
+        self.old_phase = self.phase
         ratio = self.hp / self.max_hp
         if ratio > 0.75:
             self.phase = 1
@@ -1447,11 +1461,22 @@ class Boss:
             self.phase = 4
             
         # Activar transición de fase si cambió
-        if old_phase != self.phase and not self.phase_transition:
+        if self.old_phase != self.phase and not self.phase_transition:
             self.phase_transition = True
             self.phase_transition_timer = 1.5
             screen_shake.start_shake(10, 1.0)
             
+            # Efecto especial para fase 2
+            if self.phase == 2:
+                self.phase2_flash_active = True
+                self.phase2_flash_timer = self.phase2_flash_duration
+        
+        # Actualizar flash de fase 2
+        if self.phase2_flash_active:
+            self.phase2_flash_timer -= dt
+            if self.phase2_flash_timer <= 0:
+                self.phase2_flash_active = False
+
         # Actualizar transición de fase
         if self.phase_transition:
             self.phase_transition_timer -= dt
@@ -1600,14 +1625,8 @@ class Boss:
         # Dibujar aura
         self.aura_effect.draw(surf)
         
-        # Efecto de transición de fase
-        if self.phase_transition:
-            transition_alpha = int(abs(math.sin(self.phase_transition_timer * 10)) * 200)
-            flash_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-            flash_surface.fill((255, 255, 255, transition_alpha))
-            surf.blit(boss_img, (self.x, self.y))
-            surf.blit(flash_surface, (self.x, self.y), special_flags=pygame.BLEND_ADD)
-        elif self.hp > 0:
+        # Dibujar el jefe normalmente sin cuadro blanco
+        if self.hp > 0:
             surf.blit(boss_img, (self.x, self.y))
 
         # Barra de vida mejorada
@@ -1713,6 +1732,13 @@ hit_effect = HitEffect()
 boss_attack_effects = BossAttackEffects()
 bullet_trail = BulletTrail()
 
+# --- Variables para el efecto de flash del fondo ---
+fondo_flash_timer = 0
+fondo_flash_duration = 0.8
+fondo_flash_active = False
+current_fondo = fondo_img
+target_fondo = fondo_fase2_img
+
 # --- Main loop ---
 running = True
 game_start_time = pygame.time.get_ticks()
@@ -1797,6 +1823,20 @@ while running:
             continue_countdown = 0
             game_over = True
 
+    # Detectar cambio de fase del jefe para activar flash de fondo
+    if boss.old_phase == 1 and boss.phase == 2 and not fondo_flash_active:
+        fondo_flash_active = True
+        fondo_flash_timer = fondo_flash_duration
+        current_fondo = fondo_img
+        target_fondo = fondo_fase2_img
+
+    # Actualizar efecto de flash del fondo
+    if fondo_flash_active:
+        fondo_flash_timer -= dt
+        if fondo_flash_timer <= 0:
+            fondo_flash_active = False
+            current_fondo = target_fondo
+
     if not game_over and not level_cleared and continue_countdown == 0 and not results_system.active:
         fight_timer += dt
         
@@ -1805,7 +1845,7 @@ while running:
         if fight_started and keys[pygame.K_x] and player.can_shoot():
             bx = player.x + player.size + 6
             by = player.y + player.size/2
-            bullet = Bullet(bx, by, 600, 0, color=GREEN, owner="player")
+            bullet = Bullet(bx, by, 600, 0, color=GREEN, owner="player")  # Balas verdes normales
             player_bullets.append(bullet)
             bullet_trail.add_trail(bx, by, GREEN, "player")
             player.shoot()
@@ -1889,9 +1929,37 @@ while running:
     # Aplicar screen shake
     shake_offset = screen_shake.get_offset()
     
-    # Dibujar fondo con shake
-    screen.blit(fondo_img, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
-    screen.blit(fondo_img, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
+    # Dibujar fondo con efecto de flash
+    if fondo_flash_active:
+        # Efecto de flash intermitente durante la transición
+        flash_progress = 1.0 - (fondo_flash_timer / fondo_flash_duration)
+        if flash_progress < 0.5:
+            # Primera mitad: fondo original con flash blanco
+            flash_intensity = int(math.sin(flash_progress * math.pi * 10) * 200)
+            screen.blit(current_fondo, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
+            screen.blit(current_fondo, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
+            
+            flash_surface = pygame.Surface((WIDTH, HEIGHT))
+            flash_surface.fill(WHITE)
+            flash_surface.set_alpha(flash_intensity)
+            screen.blit(flash_surface, (0, 0))
+        else:
+            # Segunda mitad: nuevo fondo aparece gradualmente
+            new_alpha = int((flash_progress - 0.5) * 2 * 255)
+            screen.blit(current_fondo, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
+            screen.blit(current_fondo, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
+            
+            target_fondo.set_alpha(new_alpha)
+            screen.blit(target_fondo, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
+            screen.blit(target_fondo, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
+    else:
+        # Fondo normal según la fase
+        if boss.phase >= 2 and has_fondo_fase2:
+            screen.blit(target_fondo, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
+            screen.blit(target_fondo, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
+        else:
+            screen.blit(current_fondo, (int(scroll_x) + shake_offset[0], 0 + shake_offset[1]))
+            screen.blit(current_fondo, (int(scroll_x)+WIDTH + shake_offset[0], 0 + shake_offset[1]))
 
     # Dibujar efectos de balas
     bullet_trail.draw(screen)

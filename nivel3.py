@@ -38,13 +38,22 @@ fondo_img = pygame.image.load("img/museo.png").convert()
 fondo_img = pygame.transform.scale(fondo_img, (WIDTH, HEIGHT))
 
 nave_img_original = pygame.image.load("img/nave.png").convert_alpha()
-enemy_img = pygame.image.load("img/ardilla.png").convert_alpha()
+enemy_img = pygame.image.load("img/fantasma.png").convert_alpha()
 enemy_img = pygame.transform.scale(enemy_img, (40, 40))
-jar_img = pygame.image.load("img/jarron.png").convert_alpha()
+jar_img = pygame.image.load("img/diosa.png").convert_alpha()
 jar_img = pygame.transform.scale(jar_img, (60, 80))
 
+# Cargar imagen para el nuevo enemigo de sombra
+try:
+    shadow_enemy_img = pygame.image.load("img/fantasma2.png").convert_alpha()
+    shadow_enemy_img = pygame.transform.scale(shadow_enemy_img, (50, 50))
+    has_shadow_img = True
+except:
+    print("No se pudo cargar sombra.png, se usará un círculo morado")
+    has_shadow_img = False
+
 # Imagen para la pantalla de introducción
-girl_img = pygame.image.load("img/niña.jpeg").convert_alpha()
+girl_img = pygame.image.load("img/Afrodita.png").convert_alpha()
 girl_img = pygame.transform.scale(girl_img, (300, 400))
 
 # Cargar imagen para efecto KO
@@ -75,7 +84,7 @@ try:
     sonido_knockout = pygame.mixer.Sound("sound/bravo.mp3")
     has_knockout_sound = True
 except:
-    print("No se pudo cargar el sonido de knockout")
+    print("No se pudo carbar el sonido de knockout")
     has_knockout_sound = False
 
 # --- Efecto de Knockout ---
@@ -344,15 +353,15 @@ class ScrollingBackground:
         surf.blit(fondo_img, (-self.offset, 0))
         surf.blit(fondo_img, (-self.offset + WIDTH, 0))
 
-# --- Sistema de Iluminación ---
+# --- Sistema de Iluminación (MODIFICADO: 10 segundos de duración) ---
 class LightingSystem:
     def __init__(self):
         self.base_brightness = 1.0
         self.current_brightness = 1.0
         self.min_brightness = 0.3
-        self.darken_speed = 0.1  # Por segundo
+        self.darken_speed = 0.07  # Más lento para que dure 10 segundos
         self.light_timer = 0
-        self.light_duration = 5.0
+        self.light_duration = 10.0  # 10 segundos de duración
         self.has_light = True
         
     def update(self, dt):
@@ -396,7 +405,7 @@ class LightingSystem:
         light_text = font.render("LUZ", True, LIGHT_YELLOW if self.has_light else GREY)
         surf.blit(light_text, (bar_x - 40, bar_y - 2))
 
-# --- Rayos de Energía (MUY ESCASOS) ---
+# --- Rayos de Energía (AUMENTADA PROBABILIDAD) ---
 class EnergyRay:
     def __init__(self, x, y):
         self.x = x
@@ -695,6 +704,92 @@ class Bullet:
     def draw(self, surf):
         pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), self.radius)
 
+# --- Enemigo de Sombra (NUEVO) ---
+class ShadowEnemy:
+    def __init__(self, jar, elapsed_time):
+        self.w = 50
+        self.h = 50
+        # Aparece desde la derecha
+        self.x = WIDTH + 50
+        self.y = random.randint(50, HEIGHT - 50)
+        self.active = False
+        
+        time_factor = min(2.0, 1.0 + (elapsed_time / 120))
+        
+        self.hp = int(60 * time_factor)  # Más vida que los enemigos normales
+        self.speed = int(40 * time_factor)  # Más lento que los enemigos normales
+        self.enemy_type = "shadow"
+        self.rect = pygame.Rect(self.x, self.y, self.w, self.h)
+        self.color = PURPLE
+        self.jar = jar
+        self.has_energy = random.random() < 0.15  # 15% de chance de soltar energía
+        self.pulse_timer = 0
+        self.alpha = 255
+
+    def update(self, dt, lighting_system):
+        if not self.active:
+            return
+            
+        self.pulse_timer += dt
+        
+        # Solo se actualiza si no hay luz
+        if lighting_system.has_light:
+            # Si hay luz, desaparece gradualmente
+            self.alpha = max(0, self.alpha - 200 * dt)
+            if self.alpha <= 0:
+                self.active = False
+                return
+        else:
+            # Si no hay luz, aparece gradualmente
+            self.alpha = min(255, self.alpha + 200 * dt)
+            
+            # Perseguir el jarrón
+            dx = self.jar.x - self.x
+            dy = self.jar.y - self.y
+            dist = math.hypot(dx, dy)
+            if dist != 0:
+                dx /= dist
+                dy /= dist
+
+            self.x += dx * self.speed * dt
+            self.y += dy * self.speed * dt
+            self.rect.topleft = (int(self.x), int(self.y))
+
+    def draw(self, surf):
+        if self.alpha > 0:
+            if has_shadow_img:
+                # Usar imagen con efecto de transparencia
+                shadow_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+                shadow_surface.fill((0, 0, 0, 0))
+                shadow_surface.blit(shadow_enemy_img, (0, 0))
+                shadow_surface.set_alpha(self.alpha)
+                surf.blit(shadow_surface, (self.x, self.y))
+            else:
+                # Dibujar círculo morado como fallback
+                shadow_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+                pygame.draw.circle(shadow_surface, (*PURPLE, self.alpha), 
+                                 (self.w//2, self.h//2), self.w//2)
+                surf.blit(shadow_surface, (self.x, self.y))
+                
+                # Efecto de pulsación
+                pulse_radius = self.w//2 + math.sin(self.pulse_timer * 5) * 3
+                pulse_surface = pygame.Surface((int(pulse_radius*2), int(pulse_radius*2)), pygame.SRCALPHA)
+                pygame.draw.circle(pulse_surface, (*PURPLE, self.alpha//2), 
+                                 (int(pulse_radius), int(pulse_radius)), int(pulse_radius))
+                surf.blit(pulse_surface, (self.x + self.w//2 - pulse_radius, self.y + self.h//2 - pulse_radius))
+
+        # Barra de vida
+        if self.hp < 60:
+            max_hp = 60
+            health_width = (self.w * self.hp) // max_hp
+            health_rect = Rect(self.x, self.y - 8, health_width, 4)
+            health_surface = pygame.Surface((health_width, 4), pygame.SRCALPHA)
+            pygame.draw.rect(health_surface, (0, 255, 0, self.alpha), (0, 0, health_width, 4))
+            surf.blit(health_surface, (self.x, self.y - 8))
+
+    def activate(self):
+        self.active = True
+
 # --- Enemigos (solo aparecen por la derecha) ---
 class Enemy:
     def __init__(self, jar, elapsed_time, hp=25, speed=90, enemy_type="basic"):
@@ -713,7 +808,7 @@ class Enemy:
         self.rect = pygame.Rect(self.x, self.y, self.w, self.h)
         self.color = RED
         self.jar = jar
-        self.has_energy = random.random() < 0.1  # SOLO 10% de chance de soltar energía (MUY RARO)
+        self.has_energy = random.random() < 0.15  # AUMENTADO: 15% de chance de soltar energía
 
         if enemy_type == "fast":
             self.speed = int(140 * time_factor)
@@ -762,30 +857,27 @@ class DialogueSystem:
         self.current_line = 0
         self.lines = [
             "¡La energía del museo se está agotando!",
-            "Debes proteger el Jarrón Sagrado durante 2 minutos completos.",
-            "Las sombras atacarán desde la derecha, intentando destruir el jarrón.",
+            "Debes proteger a la pequeña diosa, llévala a la salida.",
+            "Las sombras atacarán desde la derecha, intentando destruir a la diosa.",
             "Recoge los rayos de energía para mantener la luz encendida.",
-            "Los rayos de energía son muy escasos, ¡úsalos sabiamente!",
-            "El jarrón se moverá por el museo y se esconderá cuando le ataquen.",
-            "¡Sobrevive 2 minutos y serás un verdadero héroe!",
-            "Mantén el jarrón a salvo hasta que el tiempo se agote..."
+            "¡Cuidado! Ahora hay enemigos de sombra que solo atacan en la oscuridad.",
+            "Los rayos de energía aparecerán en el museo, ¡úsalos sabiamente!",
+            "La luz dura 10 segundos pero se va apagando poco a poco.",
+            "¡Salva a la diosa y serás un verdadero héroe!",
+            "Mantén la pequeña diosa a salvo hasta que salgan del museo..."
         ]
         self.victory_lines = [
-            "¡INCREÍBLE! Has logrado lo imposible...",
-            "El Jarrón Sagrado está a salvo gracias a tu valentía.",
-            "Durante 2 minutos completos, enfrentaste la oscuridad...",
-            "Cada rayo de energía que recolectaste mantuvo viva la esperanza.",
-            "El museo recupera su esplendor gracias a tu hazaña.",
-            "Tu nombre será recordado en las leyendas del museo...",
-            "Eras el héroe que estábamos esperando...",
-            "El poder del jarrón ahora está seguro para las futuras generaciones.",
-            "Tu coraje ha inspirado a todos los guardianes del museo...",
-            "La luz que mantuviste encendida brillará por siempre...",
-            "Este día será recordado como el día en que un héroe surgió...",
-            "El Jarrón Sagrado te agradece por tu protección incansable...",
-            "Tu leyenda acaba de comenzar, valiente guardián...",
-            "Ahora ve y comparte tu luz con el mundo..."
+            "¡FELICIDADES! ¡Has salvado a la pequeña diosa!",
+            "Ella te mira con gratitud y te sonríe, su luz vuelve a brillar entre las estrellas.",
+            "Como recompensa por tu valentía, la diosa te otorga un poderoso misil celestial.",
+            "Podrás usarlo cuando tu energía alcance los 100 puntos, canalizando el poder divino.",
+            "Presiona la tecla 'Z' para liberar su fuerza y arrasar con tus enemigos.",
+            "Cada enemigo derrotado aumentará tu energía... ¡usa tu poder con sabiduría!",
+            "Tu valor ha restaurado el equilibrio entre la luz y la oscuridad.",
+            "El universo ahora reconoce tu nombre como el Guardián de la Diosa Dorada.",
+            "Pero este no es el final... es solo el comienzo de tu verdadera leyenda."
         ]
+
         self.is_victory_dialogue = False
         self.text_speed = 0
         self.current_char = 0
@@ -947,6 +1039,7 @@ background = ScrollingBackground()
 progress_bar = ProgressBar(120)  # 2 minutos
 player_bullets = []
 enemies = []
+shadow_enemies = []  # NUEVO: lista para enemigos de sombra
 energy_rays = []
 title_screen = TitleScreen()
 dialogue = DialogueSystem()
@@ -1015,6 +1108,8 @@ while running:
                         player.invulnerable_timer = 3.0
                         if len(enemies) > 3:
                             enemies = enemies[:3]
+                        if len(shadow_enemies) > 2:
+                            shadow_enemies = shadow_enemies[:2]
                         player.x = 80
                         player.y = HEIGHT // 2
             if event.key == pygame.K_RETURN and results_system.active:
@@ -1075,6 +1170,8 @@ while running:
             player.activate()
             for enemy in enemies:
                 enemy.activate()
+            for shadow_enemy in shadow_enemies:
+                shadow_enemy.activate()
 
     # Juego principal
     if not countdown_active and elapsed > 0 and not fight_started:
@@ -1112,7 +1209,7 @@ while running:
             player_bullets.append(bullet)
             player.shoot()
 
-        # Spawn de enemigos (solo por la derecha)
+        # Spawn de enemigos normales (solo por la derecha)
         if fight_started and not countdown_active and elapsed < 120:
             base_spawn_chance = 0.02
             time_factor = min(2.0, 1.0 + (elapsed / 120))
@@ -1145,8 +1242,21 @@ while running:
                     new_enemy.activate()
                 enemies.append(new_enemy)
 
-        # Spawn de rayos de energía (EXTREMADAMENTE ESCASO - solo 0.1% de chance por frame)
-        if random.random() < 0.001 and len(energy_rays) < 2:  # MUY reducido y máximo 2 rayos
+        # Spawn de enemigos de sombra (NUEVO: solo cuando no hay luz)
+        if fight_started and not countdown_active and elapsed < 120 and not lighting.has_light:
+            shadow_spawn_chance = 0.015  # Probabilidad de spawn para sombras
+            time_factor = min(2.0, 1.0 + (elapsed / 120))
+            
+            shadow_spawn_chance = shadow_spawn_chance * time_factor
+            
+            if random.random() < shadow_spawn_chance and len(shadow_enemies) < 3:  # Máximo 3 sombras a la vez
+                new_shadow = ShadowEnemy(jar, elapsed)
+                if not countdown_active:
+                    new_shadow.activate()
+                shadow_enemies.append(new_shadow)
+
+        # Spawn de rayos de energía (AUMENTADA PROBABILIDAD: 0.2% por frame)
+        if random.random() < 0.002 and len(energy_rays) < 3:  # Aumentado y máximo 3 rayos
             ray_x = random.randint(80, WIDTH - 80)
             ray_y = random.randint(80, HEIGHT - 80)
             energy_rays.append(EnergyRay(ray_x, ray_y))
@@ -1157,6 +1267,8 @@ while running:
             if b.x > WIDTH + 50:
                 player_bullets.remove(b)
                 continue
+                
+            # Colisión con enemigos normales
             for e in enemies[:]:
                 if rect_circle_collide(e.rect, b.x, b.y, b.radius):
                     e.hp -= 25
@@ -1164,15 +1276,31 @@ while running:
                     if b in player_bullets:
                         player_bullets.remove(b)
                     if e.hp <= 0:
-                        # Posiblemente soltar energía al morir (más raro también)
-                        if e.has_energy and random.random() < 0.3:  # Solo 30% de los que pueden soltar energía lo harán
+                        # Posiblemente soltar energía al morir
+                        if e.has_energy and random.random() < 0.4:  # 40% de los que pueden soltar energía lo harán
                             energy_rays.append(EnergyRay(e.x, e.y))
                         enemies.remove(e)
                         score += 15 if e.enemy_type == "basic" else 25 if e.enemy_type == "fast" else 50 if e.enemy_type == "tank" else 75
                         enemies_defeated += 1
                     break
+                    
+            # Colisión con enemigos de sombra (NUEVO)
+            for se in shadow_enemies[:]:
+                if rect_circle_collide(se.rect, b.x, b.y, b.radius) and se.alpha > 100:
+                    se.hp -= 25
+                    player.bullets_hit += 1
+                    if b in player_bullets:
+                        player_bullets.remove(b)
+                    if se.hp <= 0:
+                        # Posiblemente soltar energía al morir
+                        if se.has_energy and random.random() < 0.5:  # 50% de chance para sombras
+                            energy_rays.append(EnergyRay(se.x, se.y))
+                        shadow_enemies.remove(se)
+                        score += 60  # Más puntos por derrotar sombras
+                        enemies_defeated += 1
+                    break
 
-        # Actualizar enemigos
+        # Actualizar enemigos normales
         for e in enemies[:]:
             e.update(dt)
             if e.rect.colliderect(player.rect):
@@ -1181,6 +1309,19 @@ while running:
             if e.rect.colliderect(jar.rect):
                 jar.take_damage()
                 enemies.remove(e)
+
+        # Actualizar enemigos de sombra (NUEVO)
+        for se in shadow_enemies[:]:
+            se.update(dt, lighting)
+            if not se.active:  # Si se desactivó (por la luz), removerlo
+                shadow_enemies.remove(se)
+                continue
+            if se.rect.colliderect(player.rect) and se.alpha > 100:
+                player.take_damage()
+                shadow_enemies.remove(se)
+            if se.rect.colliderect(jar.rect) and se.alpha > 100:
+                jar.take_damage()
+                shadow_enemies.remove(se)
 
         # Actualizar rayos de energía (eliminar los que expiran)
         for ray in energy_rays[:]:
@@ -1191,7 +1332,7 @@ while running:
                 lighting.add_light()
                 ray.collected = True
                 energy_rays.remove(ray)
-                score += 30  # Muchos más puntos por encontrar energía extremadamente rara
+                score += 30  # Muchos más puntos por encontrar energía
 
         # Condiciones de derrota
         if player.lives <= 0 and continue_available:
@@ -1209,6 +1350,8 @@ while running:
             b.draw(screen)
         for e in enemies:
             e.draw(screen)
+        for se in shadow_enemies:  # NUEVO: dibujar enemigos de sombra
+            se.draw(screen)
         for ray in energy_rays:
             ray.draw(screen)
             
