@@ -7,7 +7,7 @@ from pygame import Rect
 
 # --- Configuración ---
 WIDTH, HEIGHT = 960, 540
-FPS = 60
+FPS = 90
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -1247,7 +1247,7 @@ while running:
                 running = False
                 pygame.quit()
                 try:
-                    subprocess.run([sys.executable, "nivel8.py"])
+                    subprocess.run([sys.executable, "nivel7.py"])
                 except:
                     print("No se pudo cargar el siguiente nivel")
                 sys.exit()

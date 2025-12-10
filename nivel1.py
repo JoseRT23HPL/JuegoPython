@@ -7,7 +7,7 @@ from pygame import Rect
 
 # --- Configuración inicial ---
 WIDTH, HEIGHT = 960, 540
-FPS = 60
+FPS = 90
 
 # Colores
 WHITE = (255,255,255)
