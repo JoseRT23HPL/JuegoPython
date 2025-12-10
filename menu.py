@@ -3,6 +3,7 @@ import sys
 import os
 import math
 import subprocess
+import random  # Para las frases aleatorias
 
 # Inicializar pygame
 pygame.init()
@@ -30,6 +31,7 @@ GOLD = (255, 215, 0)
 SILVER = (192, 192, 192)
 ORANGE = (255, 165, 0)
 CYAN = (0, 255, 255)
+YELLOW = (255, 255, 0)
 
 # Fuentes - Mejoradas para diseño más atractivo
 title_font = pygame.font.SysFont("Arial", 64, bold=True)
@@ -39,8 +41,9 @@ level_font = pygame.font.SysFont("Arial", 28, bold=True)
 info_font = pygame.font.SysFont("Arial", 20)
 credits_name_font = pygame.font.SysFont("Arial", 32, bold=True)  # Nueva fuente para nombres
 credits_role_font = pygame.font.SysFont("Arial", 24)  # Nueva fuente para roles
+secret_font = pygame.font.SysFont("Arial", 40, bold=True)  # Nueva fuente para clave secreta
 
-# Estados del programa
+# Estados del programa - AGREGADO NUEVO ESTADO
 STATE_LOADING = 0
 STATE_CREATOR_1 = 1
 STATE_CREATOR_2 = 2
@@ -49,7 +52,9 @@ STATE_DIRECTOR = 4
 STATE_UNIVERSITY = 5
 STATE_MAIN_MENU = 6
 STATE_LEVEL_SELECT = 7
-STATE_CREDITS = 8  # Nuevo estado para créditos
+STATE_CREDITS = 8
+STATE_SECRET_KEY = 9  # Nuevo estado para entrada de clave secreta
+STATE_SECRET_CONFIRM = 10  # Nuevo estado para confirmación de nivel secreto
 
 # Variables de estado
 current_state = STATE_LOADING
@@ -59,6 +64,19 @@ transition_timer = 0
 loading_progress = 0
 loading_time = 0
 music_started = False
+
+# Variables para clave secreta
+secret_code = "2307"  # La clave secreta
+input_code = ""  # Lo que el usuario va ingresando
+error_message = ""  # Mensaje de error
+error_timer = 0  # Temporizador para mensaje de error
+error_phrases = [  # Frases aleatorias para errores
+    "No eres apto para esto, Vete",
+    "¡Acceso Denegado!",
+    "Clave incorrecta, inténtalo de nuevo",
+    "No tienes permiso para pasar",
+    "¡Eso no es correcto!"
+]
 
 # Efectos de flash
 flash_alpha = 0
@@ -297,13 +315,13 @@ camera_direction_y = 1  # Dirección vertical (1 = abajo, -1 = arriba)
 bg_timer = 0
 bg_flash_alpha = 0
 
-# Opciones del menú principal
-menu_options = ["Iniciar Juego", "Opciones", "Créditos", "Salir"]
+# Opciones del menú principal - CAMBIADO: "Opciones" por "Clave Secreta"
+menu_options = ["Iniciar Juego", "Clave Secreta", "Créditos", "Salir"]
 selected_option = 0
 
 # Niveles disponibles con sus archivos correspondientes
 levels = [
-    {"name": "Nivel 1", "locked": False, "difficulty": "Fácil", "color": GREEN, "file": "nivel1.py"},
+    {"name": "Nivel 1", "locked": False, "difficulty": "Fácil", "color": GREEN, "file": "historia.py"},
     {"name": "Nivel 2", "locked": False, "difficulty": "Fácil", "color": GREEN, "file": "nivel2.py"},
     {"name": "Nivel 3", "locked": False, "difficulty": "Medio", "color": ORANGE, "file": "nivel3.py"},
     {"name": "Nivel 4", "locked": False, "difficulty": "Medio", "color": ORANGE, "file": "nivel4.py"},
@@ -385,6 +403,10 @@ def ejecutar_nivel(archivo_nivel):
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
         return False
 
+# Función para ejecutar el nivel secreto
+def ejecutar_nivel_secreto():
+    return ejecutar_nivel("secreto.py")
+
 # Función para dibujar botón con diseño moderno
 def draw_button(surface, text, x, y, width, height, color, is_selected=False, is_locked=False):
     # Colores según el estado
@@ -425,6 +447,216 @@ def draw_button(surface, text, x, y, width, height, color, is_selected=False, is
         surface.blit(lock_text, (x + width - 25, y + 10))
     
     return pygame.Rect(x, y, width, height)
+
+# Función para dibujar pantalla de entrada de clave secreta
+def draw_secret_key_screen(surface):
+    # Limpiar la superficie del menú
+    menu_surface.fill(BLACK)
+    
+    # Dibujar el fondo actual en la superficie del menú
+    bg = backgrounds[current_bg]
+    menu_surface.blit(bg, (0, 0))
+    
+    # Dibujar la porción visible del menú en la pantalla principal
+    surface.blit(menu_surface, (0, 0), (camera_x, camera_y, WIDTH, HEIGHT))
+    
+    # Capa semitransparente para mejor legibilidad
+    overlay = pygame.Surface((WIDTH, HEIGHT))
+    overlay.fill(BLACK)
+    overlay.set_alpha(150)
+    surface.blit(overlay, (0, 0))
+    
+    # Título
+    title_text = "CLAVE SECRETA"
+    title_surface = title_font.render(title_text, True, GOLD)
+    surface.blit(title_surface, (WIDTH//2 - title_surface.get_width()//2, 80))
+    
+    # Instrucciones
+    instruction = subtitle_font.render("Ingresa la Clave Secreta:", True, LIGHT_BLUE)
+    surface.blit(instruction, (WIDTH//2 - instruction.get_width()//2, 160))
+    
+    # Caja para ingresar código
+    input_box_width = 300
+    input_box_height = 80
+    input_box_x = WIDTH//2 - input_box_width//2
+    input_box_y = 220
+    
+    # Dibujar caja de entrada
+    input_bg = pygame.Surface((input_box_width, input_box_height), pygame.SRCALPHA)
+    pygame.draw.rect(input_bg, (30, 30, 60, 200), (0, 0, input_box_width, input_box_height), border_radius=15)
+    pygame.draw.rect(input_bg, GOLD, (0, 0, input_box_width, input_box_height), 3, border_radius=15)
+    surface.blit(input_bg, (input_box_x, input_box_y))
+    
+    # Mostrar código ingresado (con asteriscos)
+    display_code = "*" * len(input_code)
+    code_surface = secret_font.render(display_code, True, GREEN)
+    surface.blit(code_surface, (WIDTH//2 - code_surface.get_width()//2, input_box_y + 25))
+    
+    # Mostrar mensaje de error si existe
+    if error_message and error_timer > 0:
+        # Efecto de temblor para el mensaje de error
+        shake_offset = random.randint(-3, 3) if pygame.time.get_ticks() % 100 < 50 else 0
+        
+        error_surface = subtitle_font.render(error_message, True, RED)
+        surface.blit(error_surface, (WIDTH//2 - error_surface.get_width()//2 + shake_offset, 320))
+    
+    # Botones de control
+    button_width = 180
+    button_height = 50
+    button_y = 380
+    
+    # Botón para borrar
+    clear_color = ORANGE
+    clear_bg = pygame.Surface((button_width, button_height), pygame.SRCALPHA)
+    pygame.draw.rect(clear_bg, (clear_color[0]//4, clear_color[1]//4, clear_color[2]//4, 200), 
+                    (0, 0, button_width, button_height), border_radius=10)
+    pygame.draw.rect(clear_bg, clear_color, (0, 0, button_width, button_height), 2, border_radius=10)
+    surface.blit(clear_bg, (WIDTH//2 - button_width - 20, button_y))
+    
+    clear_text = menu_font.render("BORRAR", True, clear_color)
+    surface.blit(clear_text, (WIDTH//2 - button_width - 20 + (button_width - clear_text.get_width())//2, 
+                            button_y + 10))
+    
+    # Botón para intentar
+    try_color = GREEN
+    try_bg = pygame.Surface((button_width, button_height), pygame.SRCALPHA)
+    pygame.draw.rect(try_bg, (try_color[0]//4, try_color[1]//4, try_color[2]//4, 200), 
+                    (0, 0, button_width, button_height), border_radius=10)
+    pygame.draw.rect(try_bg, try_color, (0, 0, button_width, button_height), 2, border_radius=10)
+    surface.blit(try_bg, (WIDTH//2 + 20, button_y))
+    
+    try_text = menu_font.render("INTENTAR", True, try_color)
+    surface.blit(try_text, (WIDTH//2 + 20 + (button_width - try_text.get_width())//2, 
+                          button_y + 10))
+    
+    # Instrucciones en la parte inferior
+    instructions_bg = pygame.Surface((WIDTH - 100, 50), pygame.SRCALPHA)
+    pygame.draw.rect(instructions_bg, (0, 0, 0, 150), (0, 0, WIDTH - 100, 50), border_radius=10)
+    surface.blit(instructions_bg, (50, HEIGHT - 70))
+    
+    instructions = info_font.render("Ingresa números (0-9) • ENTER para intentar • ESC para volver", True, SILVER)
+    surface.blit(instructions, (WIDTH//2 - instructions.get_width()//2, HEIGHT - 55))
+
+# Función para dibujar pantalla de confirmación de nivel secreto
+def draw_secret_confirm_screen(surface):
+    # Limpiar la superficie del menú
+    menu_surface.fill(BLACK)
+    
+    # Dibujar el fondo actual en la superficie del menú
+    bg = backgrounds[current_bg]
+    menu_surface.blit(bg, (0, 0))
+    
+    # Dibujar la porción visible del menú en la pantalla principal
+    surface.blit(menu_surface, (0, 0), (camera_x, camera_y, WIDTH, HEIGHT))
+    
+    # Capa semitransparente para mejor legibilidad
+    overlay = pygame.Surface((WIDTH, HEIGHT))
+    overlay.fill(BLACK)
+    overlay.set_alpha(180)
+    surface.blit(overlay, (0, 0))
+    
+    # Marco dorado para el mensaje
+    frame_width = 500
+    frame_height = 300
+    frame_x = WIDTH//2 - frame_width//2
+    frame_y = HEIGHT//2 - frame_height//2
+    
+    # Dibujar marco con efecto dorado
+    frame_bg = pygame.Surface((frame_width, frame_height), pygame.SRCALPHA)
+    pygame.draw.rect(frame_bg, (30, 30, 30, 220), (0, 0, frame_width, frame_height), border_radius=20)
+    pygame.draw.rect(frame_bg, GOLD, (0, 0, frame_width, frame_height), 4, border_radius=20)
+    
+    # Efecto de brillo en el marco
+    for i in range(3):
+        glow_rect = pygame.Rect(-i*2, -i*2, frame_width + i*4, frame_height + i*4)
+        pygame.draw.rect(frame_bg, (*GOLD, 30 - i*10), glow_rect, border_radius=20+i*2)
+    
+    surface.blit(frame_bg, (frame_x, frame_y))
+    
+    # Mensaje de éxito
+    success_text = "¡HAS CONSEGUIDO LA ENTRADA AL NIVEL SECRETO!"
+    success_lines = []
+    
+    # Dividir el texto si es muy largo
+    words = success_text.split()
+    current_line = ""
+    for word in words:
+        test_line = current_line + word + " "
+        # Verificar ancho aproximado
+        if len(test_line) > 30:  # Aproximadamente 30 caracteres por línea
+            success_lines.append(current_line)
+            current_line = word + " "
+        else:
+            current_line = test_line
+    if current_line:
+        success_lines.append(current_line.strip())
+    
+    # Dibujar cada línea del mensaje
+    for i, line in enumerate(success_lines):
+        line_surface = subtitle_font.render(line, True, GREEN)
+        surface.blit(line_surface, (WIDTH//2 - line_surface.get_width()//2, 
+                                  frame_y + 70 + i * 40))
+    
+    # Pregunta
+    question = "¿QUIERES CONTINUAR?"
+    question_surface = menu_font.render(question, True, GOLD)
+    surface.blit(question_surface, (WIDTH//2 - question_surface.get_width()//2, 
+                                  frame_y + 160))
+    
+    # Botones de opción
+    button_width = 140
+    button_height = 50
+    button_y = frame_y + 210
+    
+    # Botón NO
+    no_color = RED
+    no_bg = pygame.Surface((button_width, button_height), pygame.SRCALPHA)
+    pygame.draw.rect(no_bg, (no_color[0]//4, no_color[1]//4, no_color[2]//4, 200), 
+                    (0, 0, button_width, button_height), border_radius=10)
+    pygame.draw.rect(no_bg, no_color, (0, 0, button_width, button_height), 2, border_radius=10)
+    surface.blit(no_bg, (WIDTH//2 - button_width - 30, button_y))
+    
+    no_text = menu_font.render("NO", True, no_color)
+    surface.blit(no_text, (WIDTH//2 - button_width - 30 + (button_width - no_text.get_width())//2, 
+                         button_y + 10))
+    
+    # Botón SÍ
+    yes_color = GREEN
+    yes_bg = pygame.Surface((button_width, button_height), pygame.SRCALPHA)
+    pygame.draw.rect(yes_bg, (yes_color[0]//4, yes_color[1]//4, yes_color[2]//4, 200), 
+                    (0, 0, button_width, button_height), border_radius=10)
+    pygame.draw.rect(yes_bg, yes_color, (0, 0, button_width, button_height), 2, border_radius=10)
+    surface.blit(yes_bg, (WIDTH//2 + 30, button_y))
+    
+    yes_text = menu_font.render("SÍ", True, yes_color)
+    surface.blit(yes_text, (WIDTH//2 + 30 + (button_width - yes_text.get_width())//2, 
+                          button_y + 10))
+    
+    # Instrucciones
+    instructions = info_font.render("Presiona S para SÍ • N para NO • ESC para cancelar", True, SILVER)
+    surface.blit(instructions, (WIDTH//2 - instructions.get_width()//2, HEIGHT - 40))
+
+# Función para verificar la clave secreta
+def check_secret_code():
+    global input_code, error_message, error_timer, current_state
+    
+    if input_code == secret_code:
+        # Clave correcta
+        print("¡Clave secreta correcta! Accediendo al nivel secreto...")
+        trigger_flash(800, 200)
+        current_state = STATE_SECRET_CONFIRM
+        input_code = ""  # Limpiar el código
+    else:
+        # Clave incorrecta
+        error_message = random.choice(error_phrases)
+        error_timer = 2000  # Mostrar error por 2 segundos
+        print(f"Clave incorrecta. Mostrando: {error_message}")
+        
+        # Efecto de flash rojo
+        trigger_flash(300, 100)
+        
+        # Limpiar el código después de un error
+        input_code = ""
 
 # Función para dibujar pantalla de creadores con estilo clásico
 def draw_creator_screen(surface, alpha, vista_index):
@@ -657,8 +889,12 @@ while running:
                         current_state = STATE_LEVEL_SELECT
                         selected_level = 0
                         print("Abriendo selección de niveles...")
-                    elif selected_option == 1:
-                        print("Abriendo opciones...")
+                    elif selected_option == 1:  # Clave Secreta (antes Opciones)
+                        trigger_flash(600, 180)
+                        current_state = STATE_SECRET_KEY
+                        input_code = ""  # Limpiar código anterior
+                        error_message = ""  # Limpiar mensajes de error
+                        print("Accediendo a clave secreta...")
                     elif selected_option == 2:  # Créditos
                         trigger_flash(600, 180)
                         current_state = STATE_CREDITS
@@ -722,6 +958,79 @@ while running:
                     credit_timer = 0
                     fade_alpha = 0
                     print(f"Retrocediendo a crédito {current_credit_view + 1}")
+        
+        elif current_state == STATE_SECRET_KEY:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    trigger_flash(400, 150)
+                    current_state = STATE_MAIN_MENU
+                    input_code = ""
+                    error_message = ""
+                    print("Volviendo al menú principal desde clave secreta...")
+                elif event.key == pygame.K_RETURN:
+                    # Intentar verificar el código
+                    check_secret_code()
+                elif event.key == pygame.K_BACKSPACE:
+                    # Borrar el último carácter
+                    if input_code:
+                        input_code = input_code[:-1]
+                elif event.key in [pygame.K_0, pygame.K_KP0]:
+                    if len(input_code) < 4:
+                        input_code += "0"
+                elif event.key in [pygame.K_1, pygame.K_KP1]:
+                    if len(input_code) < 4:
+                        input_code += "1"
+                elif event.key in [pygame.K_2, pygame.K_KP2]:
+                    if len(input_code) < 4:
+                        input_code += "2"
+                elif event.key in [pygame.K_3, pygame.K_KP3]:
+                    if len(input_code) < 4:
+                        input_code += "3"
+                elif event.key in [pygame.K_4, pygame.K_KP4]:
+                    if len(input_code) < 4:
+                        input_code += "4"
+                elif event.key in [pygame.K_5, pygame.K_KP5]:
+                    if len(input_code) < 4:
+                        input_code += "5"
+                elif event.key in [pygame.K_6, pygame.K_KP6]:
+                    if len(input_code) < 4:
+                        input_code += "6"
+                elif event.key in [pygame.K_7, pygame.K_KP7]:
+                    if len(input_code) < 4:
+                        input_code += "7"
+                elif event.key in [pygame.K_8, pygame.K_KP8]:
+                    if len(input_code) < 4:
+                        input_code += "8"
+                elif event.key in [pygame.K_9, pygame.K_KP9]:
+                    if len(input_code) < 4:
+                        input_code += "9"
+        
+        elif current_state == STATE_SECRET_CONFIRM:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    # Volver al menú principal
+                    trigger_flash(400, 150)
+                    current_state = STATE_MAIN_MENU
+                    print("Cancelando nivel secreto...")
+                elif event.key == pygame.K_s or event.key == pygame.K_y:
+                    # Sí - Ejecutar nivel secreto
+                    trigger_flash(800, 200)
+                    print("🚀 Ejecutando nivel secreto...")
+                    
+                    # Ejecutar el nivel secreto
+                    nivel_ejecutado = ejecutar_nivel_secreto()
+                    
+                    if nivel_ejecutado:
+                        print("✅ Regresando del nivel secreto")
+                        trigger_flash(300, 100)
+                    
+                    # Volver al menú principal después de ejecutar
+                    current_state = STATE_MAIN_MENU
+                elif event.key == pygame.K_n:
+                    # No - Volver al menú principal
+                    trigger_flash(400, 150)
+                    current_state = STATE_MAIN_MENU
+                    print("Nivel secreto cancelado...")
     
     # Lógica de estados
     if current_state == STATE_LOADING:
@@ -808,7 +1117,7 @@ while running:
             fade_alpha = 0
             print(f"Mostrando crédito {current_credit_view + 1}/{len(creditos_vistas)}")
     
-    elif current_state in [STATE_MAIN_MENU, STATE_LEVEL_SELECT]:
+    elif current_state in [STATE_MAIN_MENU, STATE_LEVEL_SELECT, STATE_SECRET_KEY, STATE_SECRET_CONFIRM]:
         # Efecto de cámara avanzando (movimiento más dinámico)
         # Movimiento horizontal principal (como si avanzáramos)
         camera_x += camera_speed_x * camera_direction_x * dt / 16
@@ -846,6 +1155,12 @@ while running:
             if particle['y'] > 150:
                 particle['y'] = 0
                 particle['x'] = pygame.time.get_ticks() % WIDTH
+    
+    # Actualizar temporizador de mensaje de error
+    if error_timer > 0:
+        error_timer -= dt
+        if error_timer <= 0:
+            error_message = ""
     
     # Actualizar efecto flash
     if flash_alpha > 0:
@@ -1122,6 +1437,14 @@ while running:
         else:
             instructions = info_font.render("Flechas para navegar • ENTER para jugar • ESC para volver", True, SILVER)
         screen.blit(instructions, (WIDTH//2 - instructions.get_width()//2, HEIGHT - 45))
+    
+    elif current_state == STATE_SECRET_KEY:
+        # Dibujar pantalla de clave secreta
+        draw_secret_key_screen(screen)
+    
+    elif current_state == STATE_SECRET_CONFIRM:
+        # Dibujar pantalla de confirmación de nivel secreto
+        draw_secret_confirm_screen(screen)
     
     # Aplicar efecto flash si está activo
     if flash_alpha > 0:

@@ -101,7 +101,7 @@ pygame.mixer.music.set_volume(0.4)
 sonido_inicio = pygame.mixer.Sound("sound/inicio1.mp3")   
 sonido_derrota = pygame.mixer.Sound("sound/kn.mp3")       
 sonido_daño = pygame.mixer.Sound("sound/hit.mp3")        
-sonido_coin = pygame.mixer.Sound("sound/coin.mp3")       
+sonido_coin = pygame.mixer.Sound("sound/coin2.mp3")       
 sonido_victoria = pygame.mixer.Sound("sound/victoria.mp3")
 sonido_texto = pygame.mixer.Sound("sound/text.mp3")
 

@@ -27,10 +27,11 @@ LIME = (50, 255, 50)
 HOT_PINK = (255, 20, 147)
 NEON_GREEN = (57, 255, 20)
 ELECTRIC_BLUE = (125, 249, 255)
+LAYLA_COLOR = (255, 105, 180)  # Color rosa más brillante para Layla
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Nivel 6 - El Número Uno")
+pygame.display.set_caption("Nivel 7 - Caza Fantasmas")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 20)
 large_font = pygame.font.SysFont("Arial", 24)
@@ -38,42 +39,61 @@ title_font = pygame.font.SysFont("Arial", 48)
 dialogue_font = pygame.font.SysFont("Arial", 28)
 
 # --- Recursos ---
-fondo_img = pygame.image.load("img/espectaculo.png").convert()
-fondo_img = pygame.transform.scale(fondo_img, (WIDTH, HEIGHT))
+try:
+    fondo_img = pygame.image.load("img/bosque.png").convert()
+    fondo_img = pygame.transform.scale(fondo_img, (WIDTH, HEIGHT))
+except:
+    print("No se pudo cargar bosque.png, usando fondo por defecto")
+    fondo_img = pygame.Surface((WIDTH, HEIGHT))
+    fondo_img.fill((20, 10, 40))  # Fondo morado oscuro
 
 nave_img_original = pygame.image.load("img/nave.png").convert_alpha()
 
-# Cargar imagen del nuevo enemigo "Número Uno"
+# Cargar imagen de fantasmas
 try:
-    boss_img = pygame.image.load("img/numero1.png").convert_alpha()
-    boss_img = pygame.transform.scale(boss_img, (120, 120))
-    has_boss_img = True
+    ghost_img = pygame.image.load("img/fantasma.png").convert_alpha()
+    ghost_img = pygame.transform.scale(ghost_img, (80, 80))
+    has_ghost_img = True
 except:
-    print("No se pudo cargar numero1.png, usando imagen por defecto")   
-    boss_img = pygame.Surface((120, 120))
-    boss_img.fill(RED)
-    has_boss_img = False
+    print("No se pudo cargar fantasma.png, usando imagen por defecto")
+    ghost_img = pygame.Surface((80, 80), pygame.SRCALPHA)
+    pygame.draw.circle(ghost_img, (200, 200, 255, 180), (40, 40), 35)
+    has_ghost_img = False
 
 # Cargar imágenes para la introducción
-try:
-    numero_uno_img = pygame.image.load("img/numero1.png").convert_alpha()
-    numero_uno_img = pygame.transform.scale(numero_uno_img, (300, 300))
-    has_numero_uno_img = True
-except:
-    print("No se pudo cargar la imagen del número uno")
-    has_numero_uno_img = False
-
 try:
     player_nave_img = pygame.image.load("img/niño.png").convert_alpha()
     player_nave_img = pygame.transform.scale(player_nave_img, (200, 200))
     has_player_nave_img = True
 except:
-    print("No se pudo cargar la imagen de la nave")
+    print("No se pudo cargar la imagen del niño")
     has_player_nave_img = False
+
+# Cargar imagen para Layla
+try:
+    layla_img = pygame.image.load("img/ine2.png").convert_alpha()
+    layla_img = pygame.transform.scale(layla_img, (200, 200))
+    has_layla_img = True
+except:
+    print("No se pudo cargar la imagen de Layla, usando imagen por defecto")
+    has_layla_img = False
+
+# Cargar imagen de nave para Layla en el juego
+try:
+    layla_nave_img = pygame.image.load("img/ine.png").convert_alpha()
+    layla_nave_img = pygame.transform.scale(layla_nave_img, (60, 60))
+    has_layla_nave_img = True
+except:
+    print("No se pudo cargar la nave de Layla, creando una por defecto")
+    has_layla_nave_img = False
+    layla_nave_img = pygame.Surface((60, 60), pygame.SRCALPHA)
+    pygame.draw.circle(layla_nave_img, LAYLA_COLOR, (30, 30), 25)
+    # Dibujar detalles en la nave
+    pygame.draw.circle(layla_nave_img, (255, 255, 255), (45, 30), 8)
 
 # Cargar GIF del OK
 try:
-    ok_image = pygame.image.load("img/ok.png").convert_alpha()
+    ok_image = pygame.image.load("img/bravo.png").convert_alpha()
     ok_image = pygame.transform.scale(ok_image, (320, 180))
     has_ok_image = True
 except:
@@ -81,100 +101,255 @@ except:
     has_ok_image = False
 
 # Música y sonidos
-pygame.mixer.music.load("sound/we_are_number_one.mp3")
-pygame.mixer.music.set_volume(0.4)
+try:
+    # Música para la introducción
+    intro_music = "sound/vic.mp3"
+    # Música para el nivel
+    nivel_music = "sound/f7.mp3"
+
+    pygame.mixer.music.set_volume(0.8)
+    has_music = True
+except:
+    print("No se pudo cargar la música")
+    has_music = False
 
 sonido_inicio = pygame.mixer.Sound("sound/inicio1.mp3")   
 sonido_daño = pygame.mixer.Sound("sound/hit.mp3")        
-sonido_coin = pygame.mixer.Sound("sound/coin.mp3")       
+sonido_coin = pygame.mixer.Sound("sound/coin2.mp3")       
 sonido_victoria = pygame.mixer.Sound("sound/victoria.mp3") 
 sonido_misil = pygame.mixer.Sound("sound/misil.mp3")
-sonido_fase = pygame.mixer.Sound("sound/coin.mp3")
-sonido_terremoto = pygame.mixer.Sound("sound/terremoto.mp3")
 sonido_texto = pygame.mixer.Sound("sound/text.mp3")
+
+# Cargar sonido de fantasma
+try:
+    sonido_fantasma = pygame.mixer.Sound("sound/boo.mp3")
+    sonido_fantasma.set_volume(0.5)
+    has_ghost_sound = True
+except:
+    print("No se pudo cargar boo.mp3")
+    has_ghost_sound = False
 
 # Cargar sonido de KO
 try:
-    sonido_knockout = pygame.mixer.Sound("sound/kn.mp3")
+    sonido_knockout = pygame.mixer.Sound("sound/bravo.mp3")
     has_knockout_sound = True
 except:
-    print("No se pudo cargar kn.mp3")
+    print("No se pudo cargar bravo.mp3")
     has_knockout_sound = False
 
-victory_music = "sound/vic.mp3"
-intro_music = "sound/vic.mp3"
-
-# --- Sistema de Partículas de Fiesta MODIFICADO ---
-class PartyParticleSystem:
+# --- Nave Aliada (Layla/Ine) ---
+class AllyShip:
     def __init__(self):
-        self.particles = []
-        self.colors = [RED, GREEN, BLUE, YELLOW, PURPLE, ORANGE, PINK, LIME, CYAN, HOT_PINK, NEON_GREEN, ELECTRIC_BLUE]
-        self.max_particles = 50  # LÍMITE MÁXIMO DE PARTÍCULAS
-        self.confetti_enabled = True
+        self.x = 150  # Lado izquierdo de la pantalla
+        self.y = HEIGHT // 2
+        self.size = 60
+        self.speed = 60
+        self.shoot_cooldown = 0.7
+        self.shoot_timer = random.uniform(0, 0.7)
+        self.target_y = HEIGHT // 2
+        self.move_timer = 0
+        self.move_duration = 2.0
+        self.rect = pygame.Rect(int(self.x), int(self.y), self.size, self.size)
+        self.direction = 1  # 1 para arriba, -1 para abajo
+        self.bounce_height = 100  # Altura máxima del rebote
         
-    def create_burst(self, x, y, count=15):  # REDUCIDO de 20 a 15
-        # Verificar límite de partículas
-        if len(self.particles) > self.max_particles:
+    def update(self, dt, enemy_bullets, ghosts):
+        # Movimiento vertical en patrón de rebote
+        self.move_timer += dt
+        
+        # Cambiar dirección cuando alcanza los límites
+        if self.y <= 100:
+            self.direction = 1
+        elif self.y >= HEIGHT - 100 - self.size:
+            self.direction = -1
+        
+        # Movimiento suave con patrón de onda
+        wave_offset = math.sin(self.move_timer * 2) * 30
+        self.y += self.direction * self.speed * dt + wave_offset * dt
+        
+        # Mantener dentro de límites
+        self.y = max(80, min(HEIGHT - 80 - self.size, self.y))
+        
+        # Disparar a los fantasmas
+        self.shoot_timer -= dt
+        if self.shoot_timer <= 0 and ghosts:
+            # Encontrar todos los fantasmas en pantalla
+            visible_ghosts = [ghost for ghost in ghosts if ghost.x < WIDTH - 100]
+            
+            if visible_ghosts:
+                # Elegir un fantasma aleatorio para disparar
+                target_ghost = random.choice(visible_ghosts)
+                
+                # Calcular dirección hacia el fantasma
+                dx = target_ghost.x - (self.x + self.size)
+                dy = target_ghost.y - (self.y + self.size//2)
+                dist = max(0.1, math.sqrt(dx*dx + dy*dy))
+                
+                # Crear bala aliada
+                bullet = Bullet(
+                    self.x + self.size,  # Disparar desde el lado derecho de la nave
+                    self.y + self.size//2,
+                    (dx/dist) * 350, (dy/dist) * 350,
+                    color=LAYLA_COLOR, owner="ally", damage=12
+                )
+                enemy_bullets.append(bullet)
+                
+                self.shoot_timer = self.shoot_cooldown
+                self.shoot_cooldown = random.uniform(0.5, 0.9)
+        
+        self.rect.topleft = (int(self.x), int(self.y))
+    
+    def draw(self, surf):
+        if has_layla_nave_img:
+            surf.blit(layla_nave_img, (int(self.x), int(self.y)))
+        else:
+            # Dibujar nave por defecto (forma de nave más estilizada)
+            pygame.draw.polygon(surf, LAYLA_COLOR, [
+                (self.x, self.y + self.size//2),
+                (self.x + self.size, self.y + 10),
+                (self.x + self.size, self.y + self.size - 10),
+                (self.x, self.y + self.size//2)
+            ])
+            
+            # Detalles de la nave
+            pygame.draw.circle(surf, (255, 255, 255), 
+                             (int(self.x + self.size - 15), int(self.y + self.size//2)), 8)
+            pygame.draw.circle(surf, (255, 100, 255), 
+                             (int(self.x + self.size - 15), int(self.y + self.size//2)), 5)
+
+# --- Efecto de Knockout ---
+class KnockoutEffect:
+    def __init__(self):
+        self.active = False
+        self.timer = 0
+        self.duration = 4.0
+        self.alpha = 0
+        self.scale = 0.1
+        self.sound_played = False
+        self.freeze_game = False
+        self.show_stats = False
+
+    def activate(self):
+        self.active = True
+        self.timer = 0
+        self.alpha = 0
+        self.scale = 0.1
+        self.sound_played = False
+        self.freeze_game = True
+        self.show_stats = False
+        if has_knockout_sound:
+            sonido_knockout.play()
+
+    def update(self, dt):
+        if not self.active:
+            return False
+            
+        self.timer += dt
+        progress = min(1.0, self.timer / self.duration)
+        
+        if progress < 0.3:
+            self.alpha = int(progress / 0.3 * 255)
+            self.scale = 0.1 + (1.0 - 0.1) * (progress / 0.3)
+        elif progress < 0.6:
+            self.alpha = 255
+            self.scale = 1.0
+        elif progress < 0.8:
+            self.alpha = int((1.0 - (progress - 0.6) / 0.2) * 255)
+            self.scale = 1.0
+        else:
+            self.show_stats = True
+            self.alpha = 0
+            
+        if progress >= 1.0:
+            self.active = False
+            self.freeze_game = False
+            return True
+        return False
+
+    def draw(self, surf):
+        if not self.active:
             return
             
-        for _ in range(min(count, self.max_particles - len(self.particles))):
+        effect_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        
+        if not self.show_stats:
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            effect_surface.blit(overlay, (0, 0))
+            
+            if has_ok_image:
+                scaled_ok = pygame.transform.scale(ok_image, 
+                                                 (int(320 * self.scale), 
+                                                  int(180 * self.scale)))
+                scaled_ok.set_alpha(self.alpha)
+                ok_rect = scaled_ok.get_rect(center=(WIDTH//2, HEIGHT//2))
+                effect_surface.blit(scaled_ok, ok_rect)
+            else:
+                ok_font = pygame.font.SysFont("Arial", int(80 * self.scale))
+                ok_text = ok_font.render("OK", True, (255, 255, 0))
+                ok_rect = ok_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 30))
+                effect_surface.blit(ok_text, ok_rect)
+                
+                ko_font = pygame.font.SysFont("Arial", int(40 * self.scale))
+                ko_text = ko_font.render("¡NIVEL COMPLETADO!", True, (255, 50, 50))
+                ko_rect = ko_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 50))
+                effect_surface.blit(ko_text, ko_rect)
+        else:
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 200))
+            effect_surface.blit(overlay, (0, 0))
+            
+            victory_font = pygame.font.SysFont("Arial", 48)
+            victory_text = victory_font.render("¡VICTORIA!", True, GOLD)
+            effect_surface.blit(victory_text, (WIDTH//2 - victory_text.get_width()//2, HEIGHT//2 - 100))
+            
+            continue_font = pygame.font.SysFont("Arial", 24)
+            continue_text = continue_font.render("Presiona ESPACIO para ver estadísticas", True, WHITE)
+            effect_surface.blit(continue_text, (WIDTH//2 - continue_text.get_width()//2, HEIGHT//2 + 50))
+        
+        surf.blit(effect_surface, (0, 0))
+
+# --- Sistema de Scroll ---
+class ScrollSystem:
+    def __init__(self):
+        self.scroll_x = 0
+        self.scroll_speed = 100
+        self.base_speed = 100
+        
+    def update(self, dt):
+        self.scroll_x -= self.scroll_speed * dt
+        if self.scroll_x <= -WIDTH:
+            self.scroll_x = 0
+            
+    def get_scroll_offset(self):
+        return self.scroll_x
+
+# --- Sistema de Partículas para Fantasmas ---
+class GhostParticleSystem:
+    def __init__(self):
+        self.particles = []
+        
+    def create_ghost_trail(self, x, y, count=5):
+        for _ in range(count):
             angle = random.uniform(0, math.pi * 2)
-            speed = random.uniform(80, 250)  # REDUCIDA velocidad
-            lifetime = random.uniform(0.8, 2.0)  # REDUCIDA duración
-            size = random.randint(2, 6)  # REDUCIDO tamaño
+            speed = random.uniform(10, 30)
+            lifetime = random.uniform(0.5, 1.5)
+            size = random.randint(8, 15)
             self.particles.append({
                 'x': x, 'y': y,
                 'vx': math.cos(angle) * speed,
                 'vy': math.sin(angle) * speed,
-                'color': random.choice(self.colors),
+                'color': (random.randint(150, 255), random.randint(150, 255), 255, random.randint(100, 180)),
                 'lifetime': lifetime,
                 'max_lifetime': lifetime,
-                'size': size,
-                'type': random.choice(['circle', 'sparkle'])  # ELIMINADO 'star' para simplificar
+                'size': size
             })
-            
-    def create_confetti(self, count=5):  # REDUCIDO de 10 a 5
-        if not self.confetti_enabled or len(self.particles) > self.max_particles:
-            return
-            
-        for _ in range(min(count, self.max_particles - len(self.particles))):
-            self.particles.append({
-                'x': random.randint(0, WIDTH),
-                'y': -10,
-                'vx': random.uniform(-30, 30),  # REDUCIDA velocidad
-                'vy': random.uniform(80, 150),  # REDUCIDA velocidad
-                'color': random.choice(self.colors),
-                'lifetime': random.uniform(2.0, 4.0),  # REDUCIDA duración
-                'max_lifetime': 4.0,
-                'size': random.randint(2, 4),  # REDUCIDO tamaño
-                'type': 'confetti',
-                'rotation': random.uniform(0, 360),
-                'rotation_speed': random.uniform(-3, 3)  # REDUCIDA velocidad rotación
-            })
-    
-    def disable_confetti(self):
-        self.confetti_enabled = False
-        
-    def enable_confetti(self):
-        self.confetti_enabled = True
             
     def update(self, dt):
         for p in self.particles[:]:
             p['x'] += p['vx'] * dt
             p['y'] += p['vy'] * dt
             p['lifetime'] -= dt
-            
-            # Gravedad para confeti (más suave)
-            if p['type'] == 'confetti':
-                p['vy'] += 30 * dt  # REDUCIDA gravedad
-                p['rotation'] += p['rotation_speed']
-                
-            # Rebote en bordes para algunas partículas
-            if p['x'] < 0 or p['x'] > WIDTH:
-                p['vx'] *= -0.8
-            if p['y'] > HEIGHT and p['type'] == 'confetti':
-                p['vy'] *= -0.5
-                p['y'] = HEIGHT - 1
                 
             if p['lifetime'] <= 0:
                 self.particles.remove(p)
@@ -182,220 +357,119 @@ class PartyParticleSystem:
     def draw(self, surf):
         for p in self.particles:
             alpha = int(255 * (p['lifetime'] / p['max_lifetime']))
-            color = p['color']
+            color = (p['color'][0], p['color'][1], p['color'][2], alpha)
             
-            if p['type'] == 'circle':
-                pygame.draw.circle(surf, color, (int(p['x']), int(p['y'])), p['size'])
-            elif p['type'] == 'sparkle':
-                size = int(p['size'] * (p['lifetime'] / p['max_lifetime']))
-                pygame.draw.circle(surf, WHITE, (int(p['x']), int(p['y'])), size)
-            elif p['type'] == 'confetti':
-                # Dibujar confeti como pequeños rectángulos rotados
-                confetti_surf = pygame.Surface((p['size']*2, p['size']), pygame.SRCALPHA)
-                pygame.draw.rect(confetti_surf, color, (0, 0, p['size']*2, p['size']))
-                rotated_confetti = pygame.transform.rotate(confetti_surf, p['rotation'])
-                surf.blit(rotated_confetti, (p['x'] - rotated_confetti.get_width()//2, 
-                                           p['y'] - rotated_confetti.get_height()//2))
+            particle_surf = pygame.Surface((p['size'], p['size']), pygame.SRCALPHA)
+            pygame.draw.circle(particle_surf, color, (p['size']//2, p['size']//2), p['size']//2)
+            surf.blit(particle_surf, (int(p['x']), int(p['y'])))
 
-# --- Efectos de Fiesta MODIFICADOS ---
-class PartyEffects:
+# --- Efecto de Flash y Oscuridad MEJORADO ---
+class FlashEffect:
     def __init__(self):
         self.active = False
         self.timer = 0
-        self.color_timer = 0
-        self.current_bg_color = BLACK
-        self.flash_timer = 0
-        self.flash_visible = False
-        self.pulse_timer = 0
-        self.pulse_scale = 1.0
-        self.confetti_timer = 0
-        self.strobe_timer = 0
-        self.strobe_visible = True
-        self.intensity = 1.0  # CONTROL DE INTENSIDAD
+        self.duration = 0.3
+        self.flash_alpha = 0
+        self.dark_alpha = 180
+        self.dark_mode = True
+        self.dark_timer = 0
+        self.dark_duration = 5.0
+        self.light_duration = 3.0
+        self.cycle_timer = 0
+        self.initial_darkness = True
+        self.initial_dark_timer = 0
+        self.initial_dark_duration = 21.0
         
-    def set_intensity(self, intensity):
-        self.intensity = max(0.0, min(1.0, intensity))
-
-    def activate(self):
+    def activate_flash(self):
         self.active = True
         self.timer = 0
-        self.color_timer = 0
-        self.current_bg_color = BLACK
-        self.flash_timer = 0
-        self.flash_visible = False
-        self.pulse_timer = 0
-        self.pulse_scale = 1.0
-        self.confetti_timer = 0
-        self.strobe_timer = 0
-        self.strobe_visible = True
-
-    def update(self, dt):
-        if not self.active:
-            return
-            
-        self.timer += dt
-        self.color_timer += dt
-        self.flash_timer += dt
-        self.pulse_timer += dt
-        self.confetti_timer += dt
-        self.strobe_timer += dt
-        
-        # Cambio de color de fondo cada 0.3 segundos (modulado por intensidad)
-        if self.color_timer >= 0.3 * (2 - self.intensity):
-            self.color_timer = 0
-            if random.random() < self.intensity:  # Menos cambios a baja intensidad
-                self.current_bg_color = random.choice([PURPLE, BLUE, HOT_PINK, NEON_GREEN, ORANGE, CYAN])
-            
-        # Flash aleatorio cada 0.5-2 segundos (menos frecuente a baja intensidad)
-        if self.flash_timer >= random.uniform(0.5 * (2 - self.intensity), 2.0 * (2 - self.intensity)):
-            self.flash_timer = 0
-            if random.random() < self.intensity:  # Menos flashes a baja intensidad
-                self.flash_visible = True
-            
-        if self.flash_visible and self.flash_timer > 0.1:
-            self.flash_visible = False
-            
-        # Efecto de pulso
-        self.pulse_scale = 1.0 + math.sin(self.pulse_timer * 8) * 0.1 * self.intensity
-        
-        # Efecto estroboscópico rápido (menos intenso)
-        if self.strobe_timer >= 0.1 * (2 - self.intensity):
-            self.strobe_timer = 0
-            if random.random() < self.intensity:  # Menos strobe a baja intensidad
-                self.strobe_visible = not self.strobe_visible
-            
-    def draw(self, surf):
-        if not self.active:
-            return
-            
-        # Fondo de color cambiante (más transparente a baja intensidad)
-        bg_alpha = int(30 * self.intensity)
-        bg_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        bg_overlay.fill((*self.current_bg_color, bg_alpha))
-        surf.blit(bg_overlay, (0, 0))
-        
-        # Flash blanco ocasional (más transparente a baja intensidad)
-        if self.flash_visible:
-            flash_alpha = int(100 * self.intensity)
-            flash_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            flash_overlay.fill((255, 255, 255, flash_alpha))
-            surf.blit(flash_overlay, (0, 0))
-            
-        # Efecto estroboscópico (más suave a baja intensidad)
-        if not self.strobe_visible:
-            strobe_alpha = int(80 * self.intensity)
-            strobe_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            strobe_overlay.fill((255, 255, 255, strobe_alpha))
-            surf.blit(strobe_overlay, (0, 0))
-
-# --- Sistema de Scroll Acelerado ---
-class AcceleratedScroll:
-    def __init__(self):
-        self.base_speed = 100
-        self.current_speed = 100
-        self.target_speed = 100
-        self.acceleration = 0
-        self.max_speed = 800
-        self.scroll_x = 0
-        self.speed_boost_active = False
-        self.speed_boost_timer = 0
-        self.speed_boost_duration = 10.0
-        
-    def activate_speed_boost(self, target_speed=600, duration=9999.0):  # Duración muy larga
-        self.target_speed = target_speed
-        self.speed_boost_active = True
-        self.speed_boost_timer = duration
-        self.acceleration = (target_speed - self.current_speed) / 1.0  # Acelerar en 1 segundo
-        
-    def deactivate_speed_boost(self):
-        self.speed_boost_active = False
-        self.target_speed = self.base_speed
-        self.acceleration = (self.base_speed - self.current_speed) / 2.0  # Desacelerar en 2 segundos
+        self.flash_alpha = 255
         
     def update(self, dt):
-        # Actualizar scroll
-        self.scroll_x -= self.current_speed * dt
-        if self.scroll_x <= -WIDTH:
-            self.scroll_x = 0
-            
-        # Manejar aceleración/desaceleración
-        if self.speed_boost_active:
-            self.speed_boost_timer -= dt
-            # No desactivar automáticamente (duración muy larga)
-                
-        # Aplicar aceleración
-        if abs(self.current_speed - self.target_speed) > 1:
-            self.current_speed += self.acceleration * dt
-            self.current_speed = max(self.base_speed, min(self.max_speed, self.current_speed))
+        if self.initial_darkness:
+            self.initial_dark_timer += dt
+            if self.initial_dark_timer >= self.initial_dark_duration:
+                self.initial_darkness = False
+                self.activate_flash()
+                self.dark_mode = False
+                self.dark_timer = 0
+            return
+        
+        self.cycle_timer += dt
+        
+        if self.dark_mode:
+            self.dark_timer += dt
+            if self.dark_timer >= self.dark_duration:
+                self.dark_mode = False
+                self.dark_timer = 0
+                self.activate_flash()
         else:
-            self.current_speed = self.target_speed
-            
-    def get_scroll_offset(self):
-        return self.scroll_x
+            self.dark_timer += dt
+            if self.dark_timer >= self.light_duration:
+                self.dark_mode = True
+                self.dark_timer = 0
+                self.activate_flash()
         
-    def is_high_speed(self):
-        return self.current_speed > 400
+        if self.active:
+            self.timer += dt
+            progress = min(1.0, self.timer / self.duration)
+            self.flash_alpha = int(255 * (1 - progress))
+            
+            if progress >= 1.0:
+                self.active = False
+                
+    def draw(self, surf):
+        if self.initial_darkness:
+            dark_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            dark_overlay.fill((0, 0, 0, self.dark_alpha))
+            surf.blit(dark_overlay, (0, 0))
+           
+        else:
+            if self.dark_mode:
+                dark_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+                dark_overlay.fill((0, 0, 0, 150))
+                surf.blit(dark_overlay, (0, 0))
+                
+        if self.active:
+            flash_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            flash_overlay.fill((255, 255, 255, self.flash_alpha))
+            surf.blit(flash_overlay, (0, 0))
 
-# --- Sistema de Introducción Mejorado ---
+# --- Sistema de Introducción para Nivel 7 ---
 class IntroductionSystem:
     def __init__(self):
         self.active = True
         self.current_dialogue = 0
         self.dialogues = [
             {
-                "speaker": "numero_uno",
-                "text": "¡JAJAJA! ¡Por fin llegas! Pensé que nunca te atreverías a enfrentarme.",
-                "position": "right"
-            },
-            {
-                "speaker": "player", 
-                "text": "¿Quién eres tú? No reconozco tu forma...",
+                "speaker": "player",
+                "text": "¿Qué es esto? Parece una casa embrujada...",
                 "position": "left"
             },
             {
-                "speaker": "numero_uno",
-                "text": "¡Soy el NÚMERO UNO! El mejor de todos, el más poderoso.",
+                "speaker": "layla", 
+                "text": "Este es el camino más corto para salir",
                 "position": "right"
             },
             {
                 "speaker": "player",
-                "text": "Número uno... No era el Bicho? Siuuuu.",
+                "text": "Pero está lleno de fantasmas",
                 "position": "left"
             },
             {
-                "speaker": "numero_uno", 
-                "text": "quien? no, yo  Soy perfecto en todo. Fuerza, velocidad, inteligencia...",
-                "position": "right"
-            },
-            {
-                "speaker": "numero_uno",
-                "text": "Mira mis movimientos, mi estilo. Nadie puede igualarme.",
+                "speaker": "layla",
+                "text": "Vamos, tú me salvaste de ese cazador. ¡Tú puedes con esto!",
                 "position": "right"
             },
             {
                 "speaker": "player",
-                "text": "La arrogancia suele ser la caída de los que se creen perfectos.",
+                "text": "Está bien, lo haré",
                 "position": "left"
             },
             {
-                "speaker": "numero_uno",
-                "text": "¡JA! Palabras de envidioso. Prepárate para ver por qué soy el mejor.",
+                "speaker": "layla",
+                "text": "Yo te ayudaré y te guiaré",
                 "position": "right"
-            },
-            {
-                "speaker": "numero_uno",
-                "text": "¡Te mostraré movimientos que ni en tus sueños podrías imaginar!",
-                "position": "right"
-            },
-            {
-                "speaker": "player",
-                "text": "Demuéstralo entonces. No tengo tiempo para fanfarrones.",
-                "position": "left"
-            },
-            {
-                "speaker": "both",
-                "text": "¡QUE COMIENCE EL ESPECTÁCULO!",
-                "position": "center"
             }
         ]
         self.text_speed = 30
@@ -407,11 +481,11 @@ class IntroductionSystem:
         self.can_advance = False
 
     def start_intro_music(self):
-        if not self.music_started:
+        if not self.music_started and has_music:
             try:
                 pygame.mixer.music.stop()
                 pygame.mixer.music.load(intro_music)
-                pygame.mixer.music.set_volume(0.5)
+                pygame.mixer.music.set_volume(0.8)
                 pygame.mixer.music.play(-1)
                 self.music_started = True
             except:
@@ -420,6 +494,16 @@ class IntroductionSystem:
     def stop_intro_music(self):
         pygame.mixer.music.stop()
         self.music_started = False
+        
+    def start_level_music(self):
+        if has_music:
+            try:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load(nivel_music)
+                pygame.mixer.music.set_volume(0.8)
+                pygame.mixer.music.play(-1)
+            except:
+                print("No se pudo cargar la música del nivel")
 
     def update(self, dt):
         current_dialogue = self.dialogues[self.current_dialogue]
@@ -442,60 +526,50 @@ class IntroductionSystem:
                     self.can_advance = True
 
     def draw(self, surf):
-        surf.fill(BLACK)
+        surf.fill((5, 2, 10))
         
-        pygame.draw.rect(surf, BROWN, (20, 20, WIDTH-40, HEIGHT-40), 4, border_radius=10)
-        pygame.draw.rect(surf, GOLD, (30, 30, WIDTH-60, HEIGHT-60), 2, border_radius=8)
+        # Dibujar silueta de casa embrujada
+        pygame.draw.rect(surf, (15, 8, 25), (WIDTH//2 - 200, HEIGHT//2 - 150, 400, 300))
+        pygame.draw.polygon(surf, (20, 10, 30), [(WIDTH//2 - 200, HEIGHT//2 - 150), 
+                                               (WIDTH//2, HEIGHT//2 - 250), 
+                                               (WIDTH//2 + 200, HEIGHT//2 - 150)])
+        
+        # Ventanas
+        pygame.draw.rect(surf, (255, 255, 100), (WIDTH//2 - 150, HEIGHT//2 - 100, 40, 60))
+        pygame.draw.rect(surf, (255, 255, 100), (WIDTH//2 + 110, HEIGHT//2 - 100, 40, 60))
+        
+        # Puerta
+        pygame.draw.rect(surf, (60, 30, 10), (WIDTH//2 - 40, HEIGHT//2, 80, 150))
         
         current_dialogue = self.dialogues[self.current_dialogue]
         
-        if current_dialogue["speaker"] == "numero_uno" or current_dialogue["speaker"] == "both":
-            if has_numero_uno_img:
-                char_x = WIDTH - 350
-                char_y = HEIGHT//2 - 150
-                numero_colored = numero_uno_img.copy()
-                numero_colored.fill(GOLD, special_flags=pygame.BLEND_RGBA_MULT)
-                surf.blit(numero_colored, (char_x, char_y))
+        if current_dialogue["speaker"] == "player" and has_player_nave_img:
+            char_x = 50
+            char_y = HEIGHT//2 - 100
+            surf.blit(player_nave_img, (char_x, char_y))
         
-        if current_dialogue["speaker"] == "player" or current_dialogue["speaker"] == "both":
-            if has_player_nave_img:
-                char_x = 50
-                char_y = HEIGHT//2 - 100
-                surf.blit(player_nave_img, (char_x, char_y))
+        if current_dialogue["speaker"] == "layla" and has_layla_img:
+            char_x = WIDTH - 250
+            char_y = HEIGHT//2 - 100
+            surf.blit(layla_img, (char_x, char_y))
         
-        if current_dialogue["position"] == "left":
-            dialog_rect = pygame.Rect(50, HEIGHT - 200, WIDTH//2 - 80, 150)
-            name_x = dialog_rect.x + 20
-            text_align = "left"
-        elif current_dialogue["position"] == "right":
-            dialog_rect = pygame.Rect(WIDTH//2 + 30, HEIGHT - 200, WIDTH//2 - 80, 150)
-            name_x = dialog_rect.x + 20
-            text_align = "left"
-        else:
-            dialog_rect = pygame.Rect(WIDTH//4, HEIGHT - 200, WIDTH//2, 150)
-            name_x = dialog_rect.centerx
-            text_align = "center"
+        dialog_rect = pygame.Rect(50, HEIGHT - 200, WIDTH - 100, 150)
         
-        pygame.draw.rect(surf, (30, 30, 50), dialog_rect, border_radius=15)
-        pygame.draw.rect(surf, GOLD, dialog_rect, 3, border_radius=15)
+        pygame.draw.rect(surf, (10, 5, 20), dialog_rect, border_radius=15)
+        pygame.draw.rect(surf, PURPLE, dialog_rect, 3, border_radius=15)
         
         speaker_names = {
-            "numero_uno": "NÚMERO UNO",
-            "player": "TU NAVE",
-            "both": "ENFRENTAMIENTO"
+            "player": "Jony",
+            "layla": "Ines"
         }
         
         name_colors = {
-            "numero_uno": GOLD,
-            "player": BLUE, 
-            "both": PURPLE
+            "player": CYAN,
+            "layla": LAYLA_COLOR
         }
         
         name_text = title_font.render(speaker_names[current_dialogue["speaker"]], True, name_colors[current_dialogue["speaker"]])
-        if text_align == "center":
-            surf.blit(name_text, (name_x - name_text.get_width()//2, dialog_rect.y + 15))
-        else:
-            surf.blit(name_text, (name_x, dialog_rect.y + 15))
+        surf.blit(name_text, (dialog_rect.x + 20, dialog_rect.y + 15))
         
         current_text = current_dialogue["text"][:self.current_char]
         
@@ -517,29 +591,16 @@ class IntroductionSystem:
         for line in lines:
             if line.strip():
                 line_surface = dialogue_font.render(line, True, WHITE)
-                if text_align == "center":
-                    surf.blit(line_surface, (dialog_rect.centerx - line_surface.get_width()//2, text_y))
-                else:
-                    surf.blit(line_surface, (dialog_rect.x + 20, text_y))
+                surf.blit(line_surface, (dialog_rect.x + 20, text_y))
                 text_y += 35
         
         if self.can_advance:
-            prompt_text = "Presiona X para continuar" if self.current_dialogue < len(self.dialogues) - 1 else "Presiona X para comenzar la batalla"
+            prompt_text = "Presiona X para continuar" if self.current_dialogue < len(self.dialogues) - 1 else "Presiona X para comenzar"
             prompt = dialogue_font.render(prompt_text, True, GREEN)
-            
-            if text_align == "center":
-                prompt_x = dialog_rect.centerx - prompt.get_width()//2
-            else:
-                prompt_x = dialog_rect.x + 20
-            
-            surf.blit(prompt, (prompt_x, dialog_rect.bottom - 40))
+            surf.blit(prompt, (dialog_rect.x + 20, dialog_rect.bottom - 40))
             
             if pygame.time.get_ticks() % 800 < 400:
-                if text_align == "center":
-                    triangle_x = dialog_rect.centerx + prompt.get_width()//2 + 20
-                else:
-                    triangle_x = prompt_x + prompt.get_width() + 20
-                
+                triangle_x = dialog_rect.x + 20 + prompt.get_width() + 20
                 triangle_points = [
                     (triangle_x, dialog_rect.bottom - 25),
                     (triangle_x + 20, dialog_rect.bottom - 25),
@@ -549,10 +610,7 @@ class IntroductionSystem:
         else:
             if pygame.time.get_ticks() % 600 < 300:
                 dots_text = dialogue_font.render("...", True, YELLOW)
-                if text_align == "center":
-                    surf.blit(dots_text, (dialog_rect.centerx - dots_text.get_width()//2, dialog_rect.bottom - 40))
-                else:
-                    surf.blit(dots_text, (dialog_rect.right - 50, dialog_rect.bottom - 40))
+                surf.blit(dots_text, (dialog_rect.right - 50, dialog_rect.bottom - 40))
 
     def advance_text(self):
         if not self.can_advance:
@@ -612,386 +670,165 @@ class TitleScreen:
         return False
         
     def draw(self, surf):
-        surf.fill(BLACK)
+        surf.fill((5, 2, 10))
         
-        title_surface = title_font.render("NIVEL 6", True, GOLD)
+        title_surface = title_font.render("NIVEL 7", True, CYAN)
         title_surface.set_alpha(self.alpha)
         surf.blit(title_surface, (WIDTH//2 - title_surface.get_width()//2, HEIGHT//2 - 100))
         
-        subtitle_surface = dialogue_font.render("El Número Uno", True, GOLD)
+        subtitle_surface = dialogue_font.render("Caza Fantasmas", True, CYAN)
         subtitle_surface.set_alpha(self.alpha)
         surf.blit(subtitle_surface, (WIDTH//2 - subtitle_surface.get_width()//2, HEIGHT//2 - 20))
         
         if self.phase in [0, 1, 2]:
-            for i in range(20):
+            for i in range(15):
                 x = random.randint(0, WIDTH)
                 y = random.randint(0, HEIGHT)
                 size = random.randint(1, 3)
-                brightness = random.randint(100, 255)
-                pygame.draw.circle(surf, (brightness, brightness, brightness), (x, y), size)
+                brightness = random.randint(100, 200)
+                pygame.draw.circle(surf, (brightness, brightness, 255), (x, y), size)
         
         if self.fade_alpha > 0:
             fade_surface = pygame.Surface((WIDTH, HEIGHT))
-            fade_surface.fill(BLACK)
+            fade_surface.fill((5, 2, 10))
             fade_surface.set_alpha(self.fade_alpha)
             surf.blit(fade_surface, (0, 0))
 
-# --- Efecto de Knockout MEJORADO ---
-class KnockoutEffect:
-    def __init__(self):
-        self.active = False
-        self.timer = 0
-        self.duration = 4.0  # Un poco más largo para mejor visibilidad
-        self.alpha = 0
-        self.scale = 0.1
-        self.sound_played = False
-        self.freeze_game = False
-        self.show_stats = False
-
-    def activate(self):
-        self.active = True
-        self.timer = 0
-        self.alpha = 0
-        self.scale = 0.1
-        self.sound_played = False
-        self.freeze_game = True  # Congelar el juego
-        self.show_stats = False
-        if has_knockout_sound:
-            sonido_knockout.play()
-
-    def update(self, dt):
-        if not self.active:
-            return False
-            
-        self.timer += dt
-        progress = min(1.0, self.timer / self.duration)
+# --- Clase Fantasma ---
+class Ghost:
+    def __init__(self, ghost_type="normal"):
+        self.type = ghost_type
+        self.size = random.randint(60, 90)
         
-        if progress < 0.3:
-            # Fase 1: Aparece el KO
-            self.alpha = int(progress / 0.3 * 255)
-            self.scale = 0.1 + (1.0 - 0.1) * (progress / 0.3)
-        elif progress < 0.6:
-            # Fase 2: Se mantiene visible
-            self.alpha = 255
-            self.scale = 1.0
-        elif progress < 0.8:
-            # Fase 3: Comienza a desaparecer
-            self.alpha = int((1.0 - (progress - 0.6) / 0.2) * 255)
-            self.scale = 1.0
-        else:
-            # Fase 4: Mostrar estadísticas
-            self.show_stats = True
-            self.alpha = 0
-            
-        if progress >= 1.0:
-            self.active = False
-            self.freeze_game = False
-            return True
-        return False
-
-    def draw(self, surf):
-        if not self.active:
-            return
-            
-        effect_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        if ghost_type == "normal":
+            self.speed = random.uniform(100, 200)
+            self.hp = 30
+            self.color = (200, 200, 255, 180)
+            self.points = 10
+            self.attack_cooldown = 1.0
+        elif ghost_type == "shooter":
+            self.speed = random.uniform(80, 150)
+            self.hp = 50
+            self.color = (255, 150, 150, 200)
+            self.points = 20
+            self.shoot_cooldown = 2.0
+            self.shoot_timer = random.uniform(0, 2.0)
+            self.attack_cooldown = 1.0
+        elif ghost_type == "charger":
+            self.speed = random.uniform(150, 250)
+            self.hp = 70
+            self.color = (150, 255, 150, 220)
+            self.points = 30
+            self.charge_timer = 0
+            self.charging = False
+            self.attack_cooldown = 0.5
         
-        if not self.show_stats:
-            # Dibujar efecto KO
-            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 150))
-            effect_surface.blit(overlay, (0, 0))
-            
-            if has_ok_image:
-                scaled_ok = pygame.transform.scale(ok_image, 
-                                                 (int(320 * self.scale), 
-                                                  int(180 * self.scale)))
-                scaled_ok.set_alpha(self.alpha)
-                ok_rect = scaled_ok.get_rect(center=(WIDTH//2, HEIGHT//2))
-                effect_surface.blit(scaled_ok, ok_rect)
-            else:
-                ok_font = pygame.font.SysFont("Arial", int(80 * self.scale))
-                ok_text = ok_font.render("OK", True, (255, 255, 0))
-                ok_rect = ok_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 30))
-                effect_surface.blit(ok_text, ok_rect)
-                
-                ko_font = pygame.font.SysFont("Arial", int(40 * self.scale))
-                ko_text = ko_font.render("KNOCKOUT!", True, (255, 50, 50))
-                ko_rect = ko_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 50))
-                effect_surface.blit(ko_text, ko_rect)
-        else:
-            # Dibujar mensaje de victoria
-            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            effect_surface.blit(overlay, (0, 0))
-            
-            victory_font = pygame.font.SysFont("Arial", 48)
-            victory_text = victory_font.render("¡VICTORIA!", True, GOLD)
-            effect_surface.blit(victory_text, (WIDTH//2 - victory_text.get_width()//2, HEIGHT//2 - 100))
-            
-            continue_font = pygame.font.SysFont("Arial", 24)
-            continue_text = continue_font.render("Presiona ESPACIO para ver estadísticas", True, WHITE)
-            effect_surface.blit(continue_text, (WIDTH//2 - continue_text.get_width()//2, HEIGHT//2 + 50))
-        
-        surf.blit(effect_surface, (0, 0))
-
-# --- Efectos Especiales para el Nivel 6 ---
-class DiscoEffect:
-    def __init__(self):
-        self.active = False
-        self.timer = 0
-        self.color_timer = 0
-        self.current_color = RED
-        self.colors = [RED, GREEN, BLUE, YELLOW, PURPLE, ORANGE, PINK, LIME, CYAN]
-
-    def activate(self):
-        self.active = True
-        self.timer = 0
-        self.color_timer = 0
-
-    def update(self, dt):
-        if not self.active:
-            return False
-            
-        self.timer += dt
-        self.color_timer += dt
-        
-        if self.color_timer >= 0.2:
-            self.color_timer = 0
-            self.current_color = random.choice(self.colors)
-            
-        # No se desactiva automáticamente, solo cuando se llame deactivate()
-        return False
-
-    def deactivate(self):
-        self.active = False
-
-    def draw(self, surf):
-        if not self.active:
-            return
-            
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((*self.current_color, 50))
-        surf.blit(overlay, (0, 0))
-
-class SpeedEffect:
-    def __init__(self):
-        self.active = False
-        self.timer = 0
-        self.speed_lines = []
-
-    def activate(self):
-        self.active = True
-        self.timer = 0
-        self.speed_lines = []
-
-    def update(self, dt):
-        if not self.active:
-            return False
-            
-        self.timer += dt
-        
-        # Generar líneas de velocidad (más frecuentemente a alta velocidad)
-        if random.random() < 0.4:
-            self.speed_lines.append({
-                'x': random.randint(0, WIDTH),
-                'y': random.randint(0, HEIGHT),
-                'length': random.randint(30, 80),
-                'width': random.randint(2, 5),
-                'life': 0.8
-            })
-        
-        for line in self.speed_lines[:]:
-            line['life'] -= dt * 3
-            if line['life'] <= 0:
-                self.speed_lines.remove(line)
-                
-        # No se desactiva automáticamente
-        return False
-
-    def deactivate(self):
-        self.active = False
-
-    def draw(self, surf):
-        if not self.active:
-            return
-            
-        for line in self.speed_lines:
-            alpha = int(line['life'] * 255)
-            color = (255, 255, 255, alpha)
-            line_surf = pygame.Surface((line['length'], line['width']), pygame.SRCALPHA)
-            line_surf.fill(color)
-            surf.blit(line_surf, (line['x'], line['y']))
-
-class UpsideDownEffect:
-    def __init__(self):
-        self.active = False
-        self.timer = 0
-        self.duration = 10.0
-        self.rotation_angle = 0
-        self.flash_timer = 0
-        self.flash_visible = True
-
-    def activate(self):
-        self.active = True
-        self.timer = 0
-        self.rotation_angle = 0
-        self.flash_timer = 0
-        self.flash_visible = True
-
-    def update(self, dt):
-        if not self.active:
-            return False
-            
-        self.timer += dt
-        self.flash_timer += dt
-        
-        # Animación de rotación
-        self.rotation_angle = (self.rotation_angle + 180 * dt) % 360
-        
-        # Efecto de parpadeo
-        if self.flash_timer >= 0.1:
-            self.flash_timer = 0
-            self.flash_visible = not self.flash_visible
-            
-        if self.timer >= self.duration:
-            self.active = False
-            return True
-        return False
-
-    def draw(self, surf):
-        if not self.active:
-            return
-            
-        # Efecto de parpadeo
-        if self.flash_visible:
-            flash_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            flash_surface.fill((255, 255, 255, 30))
-            surf.blit(flash_surface, (0, 0))
-        
-        # Mensaje de advertencia
-        warning_font = pygame.font.SysFont("Arial", 36)
-        warning_text = warning_font.render("¡MUNDO AL REVÉS!", True, RED)
-        warning_rect = warning_text.get_rect(center=(WIDTH//2, 50))
-        
-        # Efecto de temblor en el texto
-        shake_x = random.randint(-3, 3)
-        shake_y = random.randint(-3, 3)
-        surf.blit(warning_text, (warning_rect.x + shake_x, warning_rect.y + shake_y))
-
-# --- Clase Obstáculo modificada ---
-class Obstacle:
-    def __init__(self, x, y, obstacle_type="meteor"):
-        self.x = x
-        self.y = y
-        self.type = obstacle_type
-        self.speed = random.uniform(200, 350)
-        self.size = random.randint(25, 35)
-        self.color = RED if obstacle_type == "meteor" else ORANGE
+        self.x = random.randint(WIDTH + 50, WIDTH + 300)
+        self.y = random.randint(50, HEIGHT - 50)
         self.rect = pygame.Rect(int(self.x), int(self.y), self.size, self.size)
-        self.rotation = 0
-        self.rotation_speed = random.uniform(-5, 5)
-        # Dirección: de derecha a izquierda
-        self.direction = -1
-
-    def update(self, dt):
-        self.x += self.direction * self.speed * dt
-        self.rotation += self.rotation_speed
-        self.rect.topleft = (int(self.x), int(self.y))
-
-    def draw(self, surf):
-        meteor_surface = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
-        pygame.draw.circle(meteor_surface, self.color, (self.size//2, self.size//2), self.size//2)
-        pygame.draw.circle(meteor_surface, YELLOW, (self.size//2, self.size//2), self.size//4)
+        self.alpha = random.randint(150, 220)
+        self.float_timer = 0
+        self.float_speed = random.uniform(2, 4)
+        self.float_amount = random.uniform(10, 20)
+        self.attack_timer = 0
+        self.last_sound_time = 0
+        self.sound_cooldown = 3.0
         
-        rotated_meteor = pygame.transform.rotate(meteor_surface, self.rotation)
-        new_rect = rotated_meteor.get_rect(center=(self.x + self.size//2, self.y + self.size//2))
-        surf.blit(rotated_meteor, new_rect.topleft)
+    def update(self, dt, enemy_bullets, player, ally_ship):
+        self.float_timer += dt
+        float_offset = math.sin(self.float_timer * self.float_speed) * self.float_amount
 
-class CameraEffect:
-    def __init__(self):
-        self.zoom_active = False
-        self.zoom_timer = 0
-        self.zoom_duration = 8.0
-        self.zoom_level = 1.0
-        self.target_zoom = 0.7
-        self.shake_intensity = 0
-        self.shake_timer = 0
-        self.earthquake_active = False
-        self.earthquake_timer = 0
-        self.earthquake_duration = 5.0
-        self.earthquake_intensity = 15
-        self.returning_from_zoom = False
-        self.return_timer = 0
-        self.return_duration = 1.5
-        self.upside_down = False
-        self.upside_down_timer = 0
-
-    def start_zoom_out(self):
-        self.zoom_active = True
-        self.zoom_timer = 0
-        self.returning_from_zoom = False
-        self.shake_intensity = 5
-        self.shake_timer = 1.0
-
-    def start_earthquake(self):
-        self.earthquake_active = True
-        self.earthquake_timer = 0
-        self.shake_intensity = self.earthquake_intensity
-        sonido_terremoto.play()
-
-    def start_upside_down(self, duration=10.0):
-        self.upside_down = True
-        self.upside_down_timer = duration
-
-    def update(self, dt):
-        if self.earthquake_active:
-            self.earthquake_timer += dt
-            self.shake_intensity = self.earthquake_intensity * (1 - (self.earthquake_timer / self.earthquake_duration))
-            
-            if self.earthquake_timer >= self.earthquake_duration:
-                self.earthquake_active = False
-                self.shake_intensity = 0
-        
-        if self.upside_down:
-            self.upside_down_timer -= dt
-            if self.upside_down_timer <= 0:
-                self.upside_down = False
-        
-        if self.zoom_active:
-            self.zoom_timer += dt
-            
-            if not self.returning_from_zoom:
-                if self.zoom_timer < self.zoom_duration:
-                    progress = min(1.0, self.zoom_timer / 1.0)
-                    self.zoom_level = 1.0 + (self.target_zoom - 1.0) * progress
-                else:
-                    self.returning_from_zoom = True
-                    self.return_timer = 0
+        if self.type == "charger" and self.charging:
+            dx = player.x - self.x
+            dy = (player.y + float_offset) - self.y
+            dist = max(0.1, math.sqrt(dx*dx + dy*dy))
+            self.x += (dx/dist) * self.speed * 1.5 * dt
+            self.y += (dy/dist) * self.speed * 1.5 * dt
+        elif self.type == "normal":
+            dx = player.x - self.x
+            dy = player.y - self.y
+            dist = max(0.1, math.sqrt(dx*dx + dy*dy))
+            if dist < 200:
+                self.x += (dx/dist) * self.speed * 0.8 * dt
+                self.y += (dy/dist) * self.speed * 0.8 * dt
             else:
-                self.return_timer += dt
-                return_progress = min(1.0, self.return_timer / self.return_duration)
-                self.zoom_level = self.target_zoom + (1.0 - self.target_zoom) * return_progress
-                
-                if return_progress >= 1.0:
-                    self.zoom_active = False
-                    self.returning_from_zoom = False
-                    self.zoom_level = 1.0
-                    self.shake_intensity = 0
-            
-            if self.shake_timer > 0:
-                self.shake_timer -= dt
-                if not self.earthquake_active:
-                    self.shake_intensity = max(0, self.shake_intensity - dt * 5)
+                self.x -= self.speed * dt
+                self.y += float_offset * dt * 0.5
         else:
-            self.zoom_level = 1.0
-            if not self.earthquake_active:
-                self.shake_intensity = 0
-
-    def get_offset(self):
-        if self.shake_intensity > 0:
-            return (random.uniform(-self.shake_intensity, self.shake_intensity),
-                    random.uniform(-self.shake_intensity, self.shake_intensity))
-        return (0, 0)
+            self.x -= self.speed * dt
+            self.y += float_offset * dt * 0.5
+        
+        self.y = max(30, min(HEIGHT - 30, self.y))
+        
+        if self.type == "shooter":
+            self.shoot_timer -= dt
+            if self.shoot_timer <= 0:
+                self.shoot(enemy_bullets, player)
+                self.shoot_timer = self.shoot_cooldown
+                
+        elif self.type == "charger":
+            self.charge_timer += dt
+            if not self.charging and self.charge_timer >= 3.0:
+                self.charging = True
+                self.charge_timer = 0
+            elif self.charging and self.charge_timer >= 1.5:
+                self.charging = False
+                self.charge_timer = 0
+        
+        self.attack_timer -= dt
+        dist_to_player = math.sqrt((player.x - self.x)**2 + (player.y - self.y)**2)
+        if dist_to_player < 50 and self.attack_timer <= 0:
+            player.take_damage()
+            self.attack_timer = self.attack_cooldown
+            
+            current_time = pygame.time.get_ticks() / 1000.0
+            if has_ghost_sound and current_time - self.last_sound_time > self.sound_cooldown and random.random() < 0.3:
+                sonido_fantasma.play()
+                self.last_sound_time = current_time
+        
+        self.rect.topleft = (int(self.x), int(self.y))
+        
+    def shoot(self, enemy_bullets, player):
+        dx = player.x - self.x
+        dy = player.y - self.y
+        dist = max(0.1, math.sqrt(dx*dx + dy*dy))
+        
+        bullet_color = (255, 100, 100) if self.type == "shooter" else (100, 255, 100)
+        enemy_bullets.append(Bullet(
+            self.x, self.y + self.size//2,
+            (dx/dist) * 300, (dy/dist) * 300,
+            color=bullet_color, owner="ghost", damage=15
+        ))
+        
+    def take_damage(self, damage):
+        self.hp -= damage
+        destroyed = self.hp <= 0
+        
+        if destroyed and has_ghost_sound and random.random() < 0.4:
+            current_time = pygame.time.get_ticks() / 1000.0
+            if current_time - self.last_sound_time > 1.0:
+                sonido_fantasma.play()
+                self.last_sound_time = current_time
+                
+        return destroyed
+        
+    def draw(self, surf):
+        ghost_surface = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        
+        if has_ghost_img:
+            ghost_img_scaled = pygame.transform.scale(ghost_img, (self.size, self.size))
+            ghost_surface.blit(ghost_img_scaled, (0, 0))
+        else:
+            pygame.draw.circle(ghost_surface, self.color, (self.size//2, self.size//2), self.size//2)
+            
+            eye_size = self.size // 5
+            pygame.draw.circle(ghost_surface, (255, 0, 0), (self.size//3, self.size//2 - 5), eye_size)
+            pygame.draw.circle(ghost_surface, (255, 0, 0), (2*self.size//3, self.size//2 - 5), eye_size)
+            
+            mouth_rect = pygame.Rect(self.size//3, 2*self.size//3, self.size//3, self.size//10)
+            pygame.draw.ellipse(ghost_surface, (100, 0, 0), mouth_rect)
+        
+        surf.blit(ghost_surface, (int(self.x), int(self.y)))
 
 # --- Clases del Juego ---
 class Player:
@@ -1183,272 +1020,6 @@ class Missile:
         pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), self.radius)
         pygame.draw.circle(surf, YELLOW, (int(self.x + 8), int(self.y)), 4)
 
-# --- NumeroUno MODIFICADO para fase final ---
-class NumeroUno:
-    def __init__(self):
-        self.w = 120
-        self.h = 120
-        self.x = WIDTH + 200
-        self.y = HEIGHT // 3
-        self.max_hp = 5000
-        self.hp = self.max_hp
-        self.rect = pygame.Rect(self.x, self.y, self.w, self.h)
-        self.attack_timer = 2.0
-        self.attack_cooldown = 1.5
-        self.entering = True
-        self.exiting = False
-        self.active = True
-        self.phase = 1
-        self.move_timer = 0
-        self.move_direction = 1
-        self.phase_change_timer = 0
-        self.charge_timer = 0
-        self.charging = False
-        self.charge_direction = 0
-        self.charge_speed = 800
-        self.returning = False
-        
-        self.phase_attack_cooldowns = [1.5, 1.0, 0.7]
-        self.phase_move_speeds = [100, 180, 250]
-        
-        self.color = GOLD
-        self.bullet_color = ORANGE
-        self.rain_active = False
-        self.rain_timer = 0
-        self.rain_duration = 5.0
-        self.upside_down_timer = 0
-        self.upside_down_active = False
-        self.obstacle_timer = 0
-        self.obstacle_interval = 2.0  # AUMENTADO intervalo entre obstáculos
-        self.obstacle_count_phase3 = 2  # MÁXIMO de obstáculos por vez en fase 3
-
-    def update_phase(self):
-        hp_percentage = self.hp / self.max_hp
-        
-        if hp_percentage > 0.66:
-            new_phase = 1
-        elif hp_percentage > 0.33:
-            new_phase = 2
-        else:
-            new_phase = 3
-            
-        if new_phase != self.phase:
-            self.phase = new_phase
-            self.attack_cooldown = self.phase_attack_cooldowns[self.phase - 1]
-            return True
-        return False
-
-    def update(self, dt, enemy_bullets, player, obstacles, camera_effect, upside_down_effect):
-        if self.entering:
-            self.x -= 200 * dt
-            if self.x <= WIDTH - self.w - 100:
-                self.entering = False
-            self.rect.topleft = (int(self.x), int(self.y))
-            return
-            
-        if self.exiting:
-            self.x += 300 * dt
-            self.rect.topleft = (int(self.x), int(self.y))
-            return
-
-        if not self.active:
-            return
-
-        phase_changed = self.update_phase()
-        if phase_changed:
-            sonido_fase.play()
-            # REDUCIR intensidad de efectos en fase 3 para mejor jugabilidad
-            if self.phase == 3:
-                party_effects.set_intensity(0.3)  # MENOS intenso en fase final
-                party_particles.disable_confetti()  # DESACTIVAR confeti en fase 3
-
-        # Ataque de carga en fase 1
-        if self.phase == 1 and not self.charging and not self.returning:
-            self.charge_timer += dt
-            if self.charge_timer >= 3.0:
-                self.charging = True
-                self.charge_timer = 0
-                self.charge_direction = -1
-
-        if self.charging:
-            self.x += self.charge_direction * self.charge_speed * dt
-            if self.x <= 100:
-                self.charging = False
-                self.returning = True
-                self.charge_direction = 1
-
-        if self.returning:
-            self.x += self.charge_direction * 400 * dt
-            if self.x >= WIDTH - self.w - 100:
-                self.returning = False
-
-        # Efecto de pantalla al revés en fase 2
-        if self.phase == 2 and not self.upside_down_active:
-            self.upside_down_timer += dt
-            if self.upside_down_timer >= 5.0:
-                self.upside_down_active = True
-                camera_effect.start_upside_down(10.0)
-                upside_down_effect.activate()
-                self.upside_down_timer = 0
-
-        # Generar obstáculos en fase 3 de manera MÁS CONTROLADA
-        if self.phase == 3:
-            self.obstacle_timer += dt
-            if self.obstacle_timer >= self.obstacle_interval:
-                self.obstacle_timer = 0
-                # Solo generar 1 obstáculo a la vez en fase 3
-                num_obstacles = random.randint(1, 1)  # SIEMPRE 1 en fase 3
-                for i in range(num_obstacles):
-                    # Verificar que no haya muchos obstáculos en pantalla
-                    if len(obstacles) < 3:  # MÁXIMO 3 obstáculos en pantalla
-                        obstacles.append(Obstacle(
-                            random.randint(WIDTH + 50, WIDTH + 200),
-                            random.randint(100, HEIGHT - 100),
-                            "meteor"
-                        ))
-
-        self.move_timer += dt
-        move_speed = self.phase_move_speeds[self.phase - 1]
-        
-        if not self.charging and not self.returning:
-            if self.phase == 1:
-                if self.move_timer >= 1.0:
-                    self.move_timer = 0
-                    self.move_direction *= -1
-                
-                self.y += self.move_direction * move_speed * dt
-                self.y = max(HEIGHT//4, min(HEIGHT//2, self.y))
-                    
-            elif self.phase == 2:
-                if self.move_timer >= 0.5:
-                    self.move_timer = 0
-                    self.move_direction = random.choice([-1, 1])
-                
-                self.y += self.move_direction * move_speed * dt
-                self.y = max(HEIGHT//5, min(HEIGHT//1.7, self.y))
-                    
-            elif self.phase == 3:
-                if self.move_timer >= 0.3:
-                    self.move_timer = 0
-                    self.move_direction = random.choice([-1, 1])
-                
-                wave_movement = math.sin(pygame.time.get_ticks() * 0.01) * 50
-                self.y += self.move_direction * move_speed * dt + wave_movement * dt
-                self.y = max(HEIGHT//6, min(HEIGHT//1.5, self.y))
-
-        self.attack_timer -= dt
-        if self.attack_timer <= 0 and not self.charging and not self.returning:
-            self.attack_timer = self.attack_cooldown
-            
-            if self.phase == 1:
-                self.attack_phase1(enemy_bullets)
-            elif self.phase == 2:
-                self.attack_phase2(enemy_bullets, player)
-            elif self.phase == 3:
-                self.attack_phase3(enemy_bullets, player, obstacles)
-
-        self.rect.topleft = (int(self.x), int(self.y))
-
-    def attack_phase1(self, enemy_bullets):
-        # Disparos en patrón de abanico
-        for i in range(7):
-            angle = math.radians(-45 + i * 15)
-            enemy_bullets.append(Bullet(
-                self.x + self.w//2, self.y + self.h,
-                -350 * math.cos(angle), 250 * math.sin(angle),
-                color=self.bullet_color, owner="boss", damage=15
-            ))
-
-    def attack_phase2(self, enemy_bullets, player):
-        # Disparos dirigidos al jugador
-        for i in range(5):
-            angle_offset = random.uniform(-0.3, 0.3)
-            dx = player.x - self.x
-            dy = player.y - self.y
-            dist = math.hypot(dx, dy) or 1
-            enemy_bullets.append(Bullet(
-                self.x + self.w//2, self.y + self.h//2,
-                (dx/dist + angle_offset) * 400, (dy/dist + angle_offset) * 400,
-                color=self.bullet_color, owner="boss", damage=20
-            ))
-
-    def attack_phase3(self, enemy_bullets, player, obstacles):
-        attack_type = random.choice(["rain", "circle", "missile", "obstacles"])
-        
-        if attack_type == "rain":
-            self.rain_active = True
-            self.rain_timer = self.rain_duration
-            # REDUCIDO número de meteoritos en fase 3
-            for i in range(3):  # REDUCIDO de 5 a 3
-                obstacles.append(Obstacle(
-                    random.randint(WIDTH + 50, WIDTH + 200),
-                    random.randint(50, HEIGHT - 50),
-                    "meteor"
-                ))
-                    
-        elif attack_type == "circle":
-            for i in range(8):  # REDUCIDO de 12 a 8
-                angle = math.radians(i * 45)
-                enemy_bullets.append(Bullet(
-                    self.x + self.w//2, self.y + self.h//2,
-                    math.cos(angle) * 300, math.sin(angle) * 300,
-                    color=self.bullet_color, owner="boss", damage=25
-                ))
-                
-        elif attack_type == "missile":
-            # Lanzar misiles especiales
-            for i in range(2):  # REDUCIDO de 3 a 2
-                enemy_bullets.append(Bullet(
-                    self.x + self.w//2, self.y + self.h//2 + (i-1) * 30,
-                    -400, 0,
-                    color=PURPLE, owner="boss", damage=30
-                ))
-        
-        elif attack_type == "obstacles":
-            # Generar obstáculos controlados - MÁXIMO 2 en fase 3
-            for i in range(min(2, self.obstacle_count_phase3)):
-                obstacles.append(Obstacle(
-                    random.randint(WIDTH + 50, WIDTH + 150),
-                    random.randint(100, HEIGHT - 100),
-                    "meteor"
-                ))
-
-    def take_damage(self, damage):
-        self.hp -= damage
-        return self.hp <= 0
-
-    def start_exit(self):
-        self.exiting = True
-        self.active = False
-
-    def draw(self, surf):
-        if not self.active and self.exiting:
-            return
-            
-        phase_colors = [
-            GOLD,
-            ORANGE,
-            RED
-        ]
-        current_color = phase_colors[self.phase - 1]
-            
-        boss_colored = boss_img.copy()
-        boss_colored.fill(current_color, special_flags=pygame.BLEND_RGBA_MULT)
-        surf.blit(boss_colored, (self.x, self.y))
-        
-        bar_width = 200
-        bar_height = 15
-        bar_x = self.x + self.w//2 - bar_width//2
-        bar_y = self.y - 25
-        
-        pygame.draw.rect(surf, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height))
-        hp_fraction = max(0, self.hp / self.max_hp)
-        pygame.draw.rect(surf, current_color, (bar_x, bar_y, int(bar_width * hp_fraction), bar_height))
-        
-        names = ["Número Uno", "Modo Arrogante", "Furia Final"]
-        name_text = font.render(f"{names[self.phase-1]}: {self.hp}/{self.max_hp}", True, WHITE)
-        surf.blit(name_text, (bar_x, bar_y - 20))
-
 # --- Sistema de UI para Energía ---
 class EnergyUI:
     def __init__(self):
@@ -1482,7 +1053,35 @@ class EnergyUI:
             missile_text = font.render(f"Necesitas {100 - player.energy} más para misil", True, YELLOW)
         surf.blit(missile_text, (self.x, self.y + 25))
 
-# --- Sistema de Resultados MEJORADO ---
+# --- Barra de Progreso de Salida ---
+class ProgressBar:
+    def __init__(self):
+        self.width = 400
+        self.height = 25
+        self.x = WIDTH // 2 - self.width // 2
+        self.y = HEIGHT - 40
+        self.progress = 0.0
+        self.max_progress = 150.0
+        
+    def update(self, current_time):
+        self.progress = min(self.max_progress, current_time)
+        
+    def draw(self, surf):
+        pygame.draw.rect(surf, (50, 50, 50), (self.x, self.y, self.width, self.height), border_radius=5)
+        
+        progress_width = int((self.progress / self.max_progress) * self.width)
+        if progress_width > 0:
+            pygame.draw.rect(surf, GREEN, (self.x, self.y, progress_width, self.height), border_radius=5)
+        
+        pygame.draw.rect(surf, WHITE, (self.x, self.y, self.width, self.height), 2, border_radius=5)
+        
+        time_left = max(0, self.max_progress - self.progress)
+        minutes = int(time_left // 60)
+        seconds = int(time_left % 60)
+        time_text = font.render(f"SALIDA: {minutes:02d}:{seconds:02d}", True, WHITE)
+        surf.blit(time_text, (self.x + self.width // 2 - time_text.get_width() // 2, self.y - 25))
+
+# --- Sistema de Resultados ---
 class ResultsSystem:
     def __init__(self):
         self.active = False
@@ -1490,7 +1089,7 @@ class ResultsSystem:
         self.grade_color = WHITE
         self.motivational_phrase = ""
         
-    def calculate_grade(self, continues_used, damage_taken, accuracy, completion_time):
+    def calculate_grade(self, continues_used, damage_taken, accuracy, completion_time, ghosts_defeated):
         score = 100
         
         if continues_used > 0:
@@ -1502,27 +1101,30 @@ class ResultsSystem:
         if accuracy < 0.6:
             score -= 10
             
-        if completion_time > 180:
+        if completion_time > 150:
+            score -= 10
+            
+        if ghosts_defeated < 30:
             score -= 10
 
         if score >= 95:
-            return "A+", GOLD, "¡PERFECTO! El número uno ha caído"
+            return "A+", GOLD, "¡EXCELENTE! Eres un cazafantasmas profesional"
         elif score >= 85:
-            return "A", GREEN, "¡Excelente! Derrotaste al arrogante"
+            return "A", GREEN, "¡Muy bien! La casa está limpia de fantasmas"
         elif score >= 75:
-            return "B", BLUE, "¡Buen trabajo! Venciste al número uno"
+            return "B", BLUE, "¡Buen trabajo! Pocos fantasmas escaparon"
         elif score >= 60:
-            return "C", YELLOW, "¡Bien hecho! Superaste el desafío"
+            return "C", YELLOW, "¡Bien hecho! Sobreviviste a la casa embrujada"
         else:
-            return "D", ORANGE, "¡Logrado! El número uno ha sido derrotado"
+            return "D", ORANGE, "¡Logrado! Escapaste de la casa embrujada"
             
-    def show_results(self, player, continues_used, score, completion_time, boss_defeated):
+    def show_results(self, player, continues_used, score, completion_time, ghosts_defeated):
         self.active = True
         
         accuracy = player.bullets_hit / player.bullets_shot if player.bullets_shot > 0 else 0
         
         self.grade, self.grade_color, self.motivational_phrase = self.calculate_grade(
-            continues_used, player.damage_taken, accuracy, completion_time
+            continues_used, player.damage_taken, accuracy, completion_time, ghosts_defeated
         )
         
         self.player_lives = player.lives
@@ -1534,14 +1136,14 @@ class ResultsSystem:
         self.player_damage_taken = player.damage_taken
         self.player_bullets_hit = player.bullets_hit
         self.player_bullets_shot = player.bullets_shot
-        self.boss_defeated = boss_defeated
+        self.ghosts_defeated = ghosts_defeated
         
     def draw(self, surf):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 220))
         surf.blit(overlay, (0, 0))
         
-        title_text = title_font.render("¡VICTORIA! - NIVEL 6", True, GOLD)
+        title_text = title_font.render("¡VICTORIA! - NIVEL 7", True, CYAN)
         surf.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 40))
         
         grade_text = large_font.render(f"Calificación: {self.grade}", True, self.grade_color)
@@ -1555,7 +1157,7 @@ class ResultsSystem:
             f"Daño recibido: {self.player_damage_taken} veces",
             f"Precisión: {self.accuracy*100:.1f}% ({self.player_bullets_hit}/{self.player_bullets_shot})",
             f"Vidas restantes: {self.player_lives}/{self.player_max_lives}",
-            f"Número Uno derrotado: {'Sí' if self.boss_defeated else 'No'}"
+            f"Fantasmas derrotados: {self.ghosts_defeated}"
         ]
         
         for stat in stats:
@@ -1566,7 +1168,7 @@ class ResultsSystem:
         phrase_text = font.render(self.motivational_phrase, True, GREEN)
         surf.blit(phrase_text, (WIDTH//2 - phrase_text.get_width()//2, stats_y + 20))
         
-        instruction_text = font.render("Presiona ENTER para continuar al siguiente nivel", True, YELLOW)
+        instruction_text = font.render("Presiona ENTER para continuar", True, YELLOW)
         surf.blit(instruction_text, (WIDTH//2 - instruction_text.get_width()//2, HEIGHT - 60))
 
 # --- Funciones auxiliares ---
@@ -1577,54 +1179,30 @@ def rect_circle_collide(rect, circle_x, circle_y, radius):
     dy = circle_y - closest_y
     return dx * dx + dy * dy <= radius * radius
 
-def play_victory_music():
-    try:
-        pygame.mixer.music.stop()
-        pygame.mixer.music.load(victory_music)
-        pygame.mixer.music.set_volume(0.5)
-        pygame.mixer.music.play(-1)
-    except:
-        print("No se pudo cargar la música de victoria")
-
-def play_normal_music():
-    try:
-        pygame.mixer.music.stop()
-        pygame.mixer.music.load("sound/we_are_number_one.mp3")
-        pygame.mixer.music.set_volume(0.4)
-        pygame.mixer.music.play(-1)
-    except:
-        print("No se pudo cargar la música normal")
-
 # --- Estado del juego ---
 player = Player()
 player_bullets = []
 enemy_bullets = []
 missiles = []
-obstacles = []
-numero_uno = NumeroUno()
+ghosts = []
 title_screen = TitleScreen()
 introduction = IntroductionSystem()
 energy_ui = EnergyUI()
 results_system = ResultsSystem()
-camera_effect = CameraEffect()
+flash_effect = FlashEffect()
+ghost_particles = GhostParticleSystem()
+scroll_system = ScrollSystem()
+progress_bar = ProgressBar()
 knockout_effect = KnockoutEffect()
-disco_effect = DiscoEffect()
-speed_effect = SpeedEffect()
-upside_down_effect = UpsideDownEffect()
-
-# NUEVOS SISTEMAS DE EFECTOS
-party_effects = PartyEffects()
-party_particles = PartyParticleSystem()
-accelerated_scroll = AcceleratedScroll()
+ally_ship = AllyShip()  # Nave de Layla/Ine
 
 score = 0
 game_over = False
 level_cleared = False
 fight_started = False
-boss_defeated = 0
+ghosts_defeated = 0
 victory_sound_played = False
 knockout_shown = False
-battle_start_time = 0
 
 continue_countdown = 0
 continue_time = 10.0
@@ -1636,11 +1214,10 @@ lives_per_coin = 3
 start_time = pygame.time.get_ticks()
 completion_time = 0
 
-# Variables para control de efectos
-disco_activated = False
-speed_activated = False
-party_activated = False
-scroll_boost_activated = False
+ghost_spawn_timer = 0
+ghost_spawn_interval = 1.5
+level_duration = 150
+level_timer = 0
 
 # --- Main loop ---
 running = True
@@ -1664,34 +1241,30 @@ while running:
                     player.invulnerable = True
                     player.invulnerable_timer = 3.0
                     enemy_bullets.clear()
-                    obstacles.clear()
                     player.x = 80
                     player.y = HEIGHT // 2
             if event.key == pygame.K_RETURN and results_system.active:
                 running = False
                 pygame.quit()
                 try:
-                    subprocess.run([sys.executable, "nivel7.py"])
+                    subprocess.run([sys.executable, "nivel8.py"])
                 except:
                     print("No se pudo cargar el siguiente nivel")
                 sys.exit()
             if event.key == pygame.K_SPACE and knockout_effect.active and knockout_effect.show_stats:
-                # Saltar directamente a las estadísticas
                 knockout_effect.active = False
                 knockout_effect.freeze_game = False
-                results_system.show_results(player, continues_used, score, completion_time, boss_defeated)
+                results_system.show_results(player, continues_used, score, completion_time, ghosts_defeated)
             if event.key == pygame.K_x and introduction.active:
                 result = introduction.advance_text()
                 if result == "start_battle":
-                    play_normal_music()
+                    introduction.start_level_music()
                     player.activate()
-                    numero_uno.entering = True
                     fight_started = True
                     battle_start_time = pygame.time.get_ticks()
 
     keys = pygame.key.get_pressed()
 
-    # Pantalla de título
     if title_screen.active:
         if title_screen.update(dt):
             introduction.start_intro_music()
@@ -1699,75 +1272,106 @@ while running:
         pygame.display.flip()
         continue
 
-    # Sistema de introducción
     if introduction.active:
         introduction.update(dt)
         introduction.draw(screen)
         pygame.display.flip()
         continue
 
-    # Sistema de resultados
     if results_system.active:
         results_system.draw(screen)
         pygame.display.flip()
         continue
 
-    # Efecto de knockout
     if knockout_effect.active:
         knockout_finished = knockout_effect.update(dt)
         if knockout_finished:
             knockout_effect.active = False
             knockout_effect.freeze_game = False
-            results_system.show_results(player, continues_used, score, completion_time, boss_defeated)
+            results_system.show_results(player, continues_used, score, completion_time, ghosts_defeated)
 
-    # Juego principal (batalla) - CONGELADO durante knockout
     if not game_over and not level_cleared and fight_started and not results_system.active and not knockout_effect.freeze_game:
-        current_battle_time = (pygame.time.get_ticks() - battle_start_time) / 1000.0
+        level_timer += dt
         
-        # EFECTOS SINCRONIZADOS CON LA MÚSICA - MODIFICADOS PARA MENOS CONFETI
-        if current_battle_time >= 6.0 and not scroll_boost_activated:
-            # ACTIVAR SCROLL ACELERADO EN SEGUNDO 6 Y MANTENERLO
-            accelerated_scroll.activate_speed_boost(800, 9999.0)  # Duración casi infinita
-            scroll_boost_activated = True
-            
-        if current_battle_time >= 6.0 and not disco_activated:
-            disco_effect.activate()
-            disco_activated = True
-            
-        if current_battle_time >= 6.0 and not speed_activated:
-            speed_effect.activate()
-            speed_activated = True
-            
-        if current_battle_time >= 6.0 and not party_activated:
-            party_effects.activate()
-            party_effects.set_intensity(0.7)  # INTENSIDAD MODERADA
-            party_activated = True
-            # Crear explosión inicial de partículas (MÁS PEQUEÑA)
-            party_particles.create_burst(WIDTH//2, HEIGHT//2, 30)  # REDUCIDO de 50 a 30
+        scroll_system.update(dt)
+        progress_bar.update(level_timer)
+        flash_effect.update(dt)
         
-        # Actualizar sistemas
-        player.update(dt, keys)
-        camera_effect.update(dt)
-        disco_effect.update(dt)
-        speed_effect.update(dt)
-        upside_down_effect.update(dt)
-        accelerated_scroll.update(dt)
-        party_effects.update(dt)
-        party_particles.update(dt)
+        # Actualizar nave de Layla/Ine
+        ally_ship.update(dt, enemy_bullets, ghosts)
         
-        # Generar confeti continuo durante el efecto de fiesta - MUCHO MENOS FRECUENTE
-        if party_activated and random.random() < 0.1:  # REDUCIDO de 0.3 a 0.1
-            party_particles.create_confetti(3)  # REDUCIDO de 5 a 3
+        if level_timer >= level_duration and not knockout_shown:
+            level_cleared = True
+            completion_time = (pygame.time.get_ticks() - start_time) / 1000.0
+            if not victory_sound_played:
+                sonido_victoria.play()
+                victory_sound_played = True
+            knockout_effect.activate()
+            knockout_shown = True
 
-        # Disparar balas normales
+        ghost_particles.update(dt)
+        
+        ghost_spawn_timer += dt
+        
+        if level_timer < 30:
+            current_spawn_interval = 2.0
+            spawn_chance = 0.8
+            max_ghosts = 5
+            
+        elif level_timer < 90:
+            current_spawn_interval = 1.2
+            spawn_chance = 0.9
+            max_ghosts = 8
+            
+        elif level_timer < 120:
+            current_spawn_interval = 0.8
+            spawn_chance = 0.95
+            max_ghosts = 12
+            
+        else:
+            current_spawn_interval = 2.5
+            spawn_chance = 0.4
+            max_ghosts = 6
+        
+        if (ghost_spawn_timer >= current_spawn_interval and 
+            len(ghosts) < max_ghosts and
+            random.random() < spawn_chance):
+            
+            ghost_spawn_timer = 0
+            
+            ghost_type_chance = random.random()
+            if level_timer < 30:
+                ghost_type = "normal"
+            elif level_timer < 60:
+                ghost_type = "normal" if ghost_type_chance < 0.7 else "shooter"
+            elif level_timer < 90:
+                ghost_type = "normal" if ghost_type_chance < 0.5 else "shooter"
+            elif level_timer < 120:
+                if ghost_type_chance < 0.4:
+                    ghost_type = "normal"
+                elif ghost_type_chance < 0.7:
+                    ghost_type = "shooter"
+                else:
+                    ghost_type = "charger"
+            else:
+                if ghost_type_chance < 0.6:
+                    ghost_type = "normal"
+                elif ghost_type_chance < 0.9:
+                    ghost_type = "shooter"
+                else:
+                    ghost_type = "charger"
+            
+            ghosts.append(Ghost(ghost_type))
+
+        player.update(dt, keys)
+
         if keys[pygame.K_x] and player.can_shoot():
             bx = player.x + player.size + 6
             by = player.y + player.size / 2
-            bullet = Bullet(bx, by, 600, 0, color=GREEN, owner="player")
+            bullet = Bullet(bx, by, 600, 0, color=CYAN, owner="player")
             player_bullets.append(bullet)
             player.shoot()
 
-        # Lanzar misil
         if keys[pygame.K_z] and player.can_launch_missile():
             bx = player.x + player.size + 6
             by = player.y + player.size / 2
@@ -1775,159 +1379,126 @@ while running:
             missiles.append(missile)
             player.launch_missile()
 
-        # Actualizar número uno
-        if numero_uno.active or numero_uno.entering or numero_uno.exiting:
-            numero_uno.update(dt, enemy_bullets, player, obstacles, camera_effect, upside_down_effect)
-
-        # Actualizar obstáculos
-        for obstacle in obstacles[:]:
-            obstacle.update(dt)
-            # Eliminar obstáculos cuando salgan por la izquierda
-            if obstacle.x < -50:
-                obstacles.remove(obstacle)
+        for ghost in ghosts[:]:
+            ghost.update(dt, enemy_bullets, player, ally_ship)
+            
+            if ghost.x < -100:
+                ghosts.remove(ghost)
                 continue
-            if player.rect.colliderect(obstacle.rect):
-                player.take_damage()
-                if obstacle in obstacles:
-                    obstacles.remove(obstacle)
 
-        # Actualizar balas del jugador
         for b in player_bullets[:]:
             b.update(dt)
             if b.x > WIDTH + 50:
                 player_bullets.remove(b)
                 continue
-            if numero_uno.active and rect_circle_collide(numero_uno.rect, b.x, b.y, b.radius):
-                if numero_uno.take_damage(b.damage):
-                    numero_uno.start_exit()
-                    boss_defeated = 1
-                    score += 1000
-                    player.add_energy(100)
-                    player.activate_victory_invincibility(10.0)
-                    # ACTIVAR KNOCKOUT EFFECT cuando se derrota al jefe
-                    if not knockout_shown:
-                        knockout_effect.activate()
-                        knockout_shown = True
-                        completion_time = (pygame.time.get_ticks() - start_time) / 1000.0
-                        pygame.mixer.music.stop()
-                        if not victory_sound_played:
-                            sonido_victoria.play()
-                            victory_sound_played = True
-                else:
-                    player.add_energy(15)
-                    # Pequeña explosión al golpear
-                    party_particles.create_burst(b.x, b.y, 10)
-                player.bullets_hit += 1
-                if b in player_bullets:
-                    player_bullets.remove(b)
+                
+            for ghost in ghosts[:]:
+                if rect_circle_collide(ghost.rect, b.x, b.y, b.radius):
+                    if ghost.take_damage(b.damage):
+                        score += ghost.points
+                        player.add_energy(20)
+                        ghosts_defeated += 1
+                        ghost_particles.create_ghost_trail(ghost.x + ghost.size//2, ghost.y + ghost.size//2, 20)
+                        ghosts.remove(ghost)
+                    else:
+                        player.add_energy(5)
+                        ghost_particles.create_ghost_trail(b.x, b.y, 8)
+                    player.bullets_hit += 1
+                    if b in player_bullets:
+                        player_bullets.remove(b)
+                    break
 
-        # Actualizar misiles
         for m in missiles[:]:
             m.update(dt)
             if m.x > WIDTH + 50:
                 missiles.remove(m)
                 continue
-            if numero_uno.active and rect_circle_collide(numero_uno.rect, m.x, m.y, m.radius):
-                if numero_uno.take_damage(m.damage):
-                    numero_uno.start_exit()
-                    boss_defeated = 1
-                    score += 1000
-                    player.add_energy(150)
-                    player.activate_victory_invincibility(10.0)
-                    # ACTIVAR KNOCKOUT EFFECT cuando se derrota al jefe
-                    if not knockout_shown:
-                        knockout_effect.activate()
-                        knockout_shown = True
-                        completion_time = (pygame.time.get_ticks() - start_time) / 1000.0
-                        pygame.mixer.music.stop()
-                        if not victory_sound_played:
-                            sonido_victoria.play()
-                            victory_sound_played = True
-                else:
-                    player.add_energy(40)
-                    # Explosión de misil
-                    party_particles.create_burst(m.x, m.y, 20)
-                if m in missiles:
-                    missiles.remove(m)
+                
+            for ghost in ghosts[:]:
+                if rect_circle_collide(ghost.rect, m.x, m.y, m.radius):
+                    if ghost.take_damage(m.damage):
+                        score += ghost.points
+                        player.add_energy(30)
+                        ghosts_defeated += 1
+                        ghost_particles.create_ghost_trail(ghost.x + ghost.size//2, ghost.y + ghost.size//2, 30)
+                        ghosts.remove(ghost)
+                    else:
+                        player.add_energy(15)
+                        ghost_particles.create_ghost_trail(m.x, m.y, 15)
+                    if m in missiles:
+                        missiles.remove(m)
+                    break
 
-        # Actualizar balas enemigas
         for b in enemy_bullets[:]:
             b.update(dt)
             if b.x < -50 or b.y < -50 or b.y > HEIGHT + 50:
                 enemy_bullets.remove(b)
                 continue
-            if rect_circle_collide(player.rect, b.x, b.y, b.radius):
+            
+            if b.owner == "ghost" and rect_circle_collide(player.rect, b.x, b.y, b.radius):
                 player.take_damage()
-                # Explosión al recibir daño
-                party_particles.create_burst(b.x, b.y, 15)
+                ghost_particles.create_ghost_trail(b.x, b.y, 10)
                 if b in enemy_bullets:
                     enemy_bullets.remove(b)
+            
+            elif b.owner == "ally":
+                for ghost in ghosts[:]:
+                    if rect_circle_collide(ghost.rect, b.x, b.y, b.radius):
+                        if ghost.take_damage(b.damage):
+                            score += ghost.points
+                            player.add_energy(10)
+                            ghosts_defeated += 1
+                            ghost_particles.create_ghost_trail(ghost.x + ghost.size//2, ghost.y + ghost.size//2, 15)
+                            ghosts.remove(ghost)
+                        else:
+                            player.add_energy(3)
+                            ghost_particles.create_ghost_trail(b.x, b.y, 5)
+                        if b in enemy_bullets:
+                            enemy_bullets.remove(b)
+                        break
 
-        # Verificar game over
         if player.lives <= 0 and continue_available and continue_countdown == 0:
             continue_countdown = continue_time
             coins_inserted = 0
 
-    # Actualizar conteo de continuación
     if continue_countdown > 0:
         continue_countdown -= dt
         if continue_countdown <= 0:
             continue_countdown = 0
             game_over = True
 
-    # --- DIBUJADO MEJORADO CON EFECTOS DE FIESTA ---
+    # --- DIBUJADO ---
     screen.fill(BLACK)
     
-    # Aplicar efectos de fiesta primero (fondo)
-    party_effects.draw(screen)
-    
-    # Dibujar fondo con scroll acelerado
-    scroll_offset = accelerated_scroll.get_scroll_offset()
-    
-    # Dibujar fondo con efecto de velocidad
+    scroll_offset = scroll_system.get_scroll_offset()
     for i in range(2):
         bg_x = int(scroll_offset + i * WIDTH)
         screen.blit(fondo_img, (bg_x, 0))
-
-    # Aplicar efectos de cámara en una superficie temporal
-    game_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     
-    # Dibujar todos los elementos del juego (solo si no está congelado)
     if not knockout_effect.freeze_game:
-        numero_uno.draw(game_surface)
-
         for b in player_bullets:
-            b.draw(game_surface)
+            b.draw(screen)
         for b in enemy_bullets:
-            b.draw(game_surface)
+            b.draw(screen)
         for m in missiles:
-            m.draw(game_surface)
-        for obstacle in obstacles:
-            obstacle.draw(game_surface)
+            m.draw(screen)
+        for ghost in ghosts:
+            ghost.draw(screen)
 
         if continue_countdown == 0:
-            player.draw(game_surface)
+            player.draw(screen)
+            # Dibujar nave de Layla/Ine en el lado izquierdo
+            ally_ship.draw(screen)
     
-    # Aplicar efectos visuales al juego
-    disco_effect.draw(game_surface)
-    speed_effect.draw(game_surface)
-    upside_down_effect.draw(game_surface)
+    ghost_particles.draw(screen)
     
-    # Dibujar partículas de fiesta (encima del juego pero debajo de la UI)
-    party_particles.draw(game_surface)
+    flash_effect.draw(screen)
     
-    # Aplicar la superficie del juego a la pantalla principal
-    screen.blit(game_surface, (0, 0))
-
-    # Aplicar efecto de pantalla al revés si está activo
-    if camera_effect.upside_down:
-        screen.blit(pygame.transform.flip(screen, False, True), (0, 0))
-
-    # Dibujar efecto de knockout (encima de todo)
+    # NOTA: Se eliminó el efecto de neblina (fog_effect.draw(screen))
+    
     if knockout_effect.active:
         knockout_effect.draw(screen)
 
-    # UI (sin efectos de cámara)
     energy_ui.draw(screen, player)
     
     lives_text = font.render(f"Vidas: {player.lives}", True, WHITE)
@@ -1935,37 +1506,26 @@ while running:
     score_text = font.render(f"Puntos: {score}", True, WHITE)
     screen.blit(score_text, (12, 36))
     
-    boss_text = font.render(f"Número Uno: {'Derrotado' if boss_defeated else 'Vivo'}", True, YELLOW)
-    screen.blit(boss_text, (WIDTH//2 - boss_text.get_width()//2, 12))
+    progress_bar.draw(screen)
     
-    # Indicador de velocidad del scroll
-    if accelerated_scroll.is_high_speed():
-        speed_text = font.render(f"¡VELOCIDAD EXTREMA! {int(accelerated_scroll.current_speed)}", True, HOT_PINK)
-        screen.blit(speed_text, (WIDTH//2 - speed_text.get_width()//2, HEIGHT - 100))
+    ghosts_text = font.render(f"Fantasmas: {ghosts_defeated}", True, CYAN)
+    screen.blit(ghosts_text, (WIDTH - 150, 12))
     
-    # Indicador de invencibilidad por victoria
-    if player.victory_invincible:
-        invincible_text = font.render("INVENCIBLE", True, PURPLE)
-        screen.blit(invincible_text, (WIDTH//2 - invincible_text.get_width()//2, 40))
+    if level_timer < 30:
+        diff_text = font.render("DIFICULTAD: FÁCIL", True, GREEN)
+    elif level_timer < 90:
+        diff_text = font.render("DIFICULTAD: MEDIO", True, YELLOW)
+    elif level_timer < 120:
+        diff_text = font.render("DIFICULTAD: DIFÍCIL", True, ORANGE)
+    else:
+        diff_text = font.render("DIFICULTAD: FINAL - SOBREVIVE", True, RED)
+    screen.blit(diff_text, (WIDTH//2 - diff_text.get_width()//2, HEIGHT - 80))
     
-    # Indicador de fase y efectos
-    if fight_started and not level_cleared and not knockout_effect.freeze_game:
-        phase_text = font.render(f"Fase: {numero_uno.phase}/3", True, GOLD)
-        screen.blit(phase_text, (WIDTH - 120, 60))
-        
-        if camera_effect.upside_down:
-            upside_text = font.render("¡PANTALLA AL REVÉS!", True, RED)
-            screen.blit(upside_text, (WIDTH//2 - upside_text.get_width()//2, HEIGHT - 40))
-        
-        if numero_uno.rain_active:
-            rain_text = font.render("¡LLUVIA DE METEORITOS!", True, ORANGE)
-            screen.blit(rain_text, (WIDTH//2 - rain_text.get_width()//2, HEIGHT - 70))
-        
-        if party_activated:
-            party_text = font.render("¡MODO FIESTA ACTIVADO!", True, NEON_GREEN)
-            screen.blit(party_text, (WIDTH//2 - party_text.get_width()//2, HEIGHT - 130))
+    # Indicador de Laylá ayudando
+    if fight_started:
+        layla_help_text = font.render("Laylá/Ine te está ayudando", True, LAYLA_COLOR)
+        screen.blit(layla_help_text, (20, HEIGHT - 30))
 
-    # Pantalla de continuación
     if continue_countdown > 0:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
@@ -1986,7 +1546,6 @@ while running:
         lives_info = font.render(f"Cada moneda te da {lives_per_coin} vidas", True, GREEN)
         screen.blit(lives_info, (WIDTH//2 - lives_info.get_width()//2, HEIGHT//2 + 90))
 
-    # Game Over
     if game_over and continue_countdown == 0:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 200))
